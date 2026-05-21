@@ -253,6 +253,75 @@ select {
 }
 .spacer { flex: 1; }
 
+/* ─── breadcrumbs ───────────────────────────────────────── */
+
+.crumbs {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  row-gap: 4px;
+}
+.crumb-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.crumb {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  box-shadow: none;
+  max-width: 28ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+button.crumb-link {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 140ms var(--ease), background 140ms var(--ease);
+}
+button.crumb-link:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-tint);
+  border: none;
+  box-shadow: none;
+}
+button.crumb-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.crumb-sep {
+  color: var(--muted-soft);
+  margin: 0 4px;
+  font-size: 13px;
+  user-select: none;
+}
+.crumb-current {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  font-variation-settings: "opsz" 30;
+  padding: 0 2px;
+  max-width: 36ch;
+}
+
+@media (max-width: 640px) {
+  .crumb { max-width: 18ch; }
+  .crumb-current { font-size: 20px; max-width: 22ch; }
+}
+
 /* ─── form rows / fields ────────────────────────────────── */
 
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

@@ -1,7 +1,43 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Agent, Model, Message, Chat } from '../types';
+import type { Agent, Model, Message, Chat, Route } from '../types';
 import { MODELS, MODEL_LABELS } from '../types';
 import { reorderMainAgents, updateAgent, deleteAgent } from '../state/signals';
+import { navigate } from '../router';
+
+export type Crumb = { label: string; route?: Route; title?: string };
+
+export function Breadcrumbs(props: { items: Crumb[] }) {
+  return (
+    <nav class="crumbs" aria-label="Breadcrumb">
+      {props.items.map((c, i) => {
+        const last = i === props.items.length - 1;
+        return (
+          <span class="crumb-wrap" key={i}>
+            {c.route && !last ? (
+              <button
+                type="button"
+                class="crumb crumb-link"
+                title={c.title}
+                onClick={() => navigate(c.route!)}
+              >
+                {c.label}
+              </button>
+            ) : (
+              <span
+                class={`crumb ${last ? 'crumb-current' : ''}`}
+                title={c.title}
+                aria-current={last ? 'page' : undefined}
+              >
+                {c.label}
+              </span>
+            )}
+            {!last && <span class="crumb-sep" aria-hidden="true">/</span>}
+          </span>
+        );
+      })}
+    </nav>
+  );
+}
 
 export function ConfirmButton(props: {
   onConfirm: () => void;

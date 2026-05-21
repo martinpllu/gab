@@ -10,7 +10,7 @@ import {
   pendingExpandDefFor,
 } from '../state/signals';
 import { fingerprintDefinition } from '../engine/fingerprint';
-import { ModelPicker, TurnOrderList, ConfirmButton } from './widgets';
+import { ModelPicker, TurnOrderList, ConfirmButton, Breadcrumbs } from './widgets';
 import { navigate } from '../router';
 import type { Model } from '../types';
 
@@ -41,8 +41,12 @@ export function RunsListScreen() {
   return (
     <div class="screen list">
       <header class="topbar">
-        <button class="link" onClick={() => navigate({ kind: 'list' })}>← Chats</button>
-        <h2>{c.name}</h2>
+        <Breadcrumbs
+          items={[
+            { label: 'Chats', route: { kind: 'list' } },
+            { label: c.name },
+          ]}
+        />
         <span class="fingerprint" title="Current chat definition fingerprint">
           {currentFingerprint}
         </span>

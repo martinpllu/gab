@@ -7,7 +7,7 @@ import {
   deleteRun,
 } from '../state/signals';
 import { runLoop, requestStop } from '../engine/scheduler';
-import { Transcript, ConfirmButton } from './widgets';
+import { Transcript, ConfirmButton, Breadcrumbs } from './widgets';
 import { fingerprintDefinition } from '../engine/fingerprint';
 import { navigate } from '../router';
 import { MODEL_LABELS } from '../types';
@@ -52,8 +52,13 @@ export function ChatRunScreen() {
   return (
     <div class="screen run">
       <header class="topbar">
-        <button class="link" onClick={() => navigate({ kind: 'runs', chatId: r.chatId })}>← Runs</button>
-        <h2>{def.name}</h2>
+        <Breadcrumbs
+          items={[
+            { label: 'Chats', route: { kind: 'list' } },
+            { label: def.name, route: { kind: 'runs', chatId: r.chatId } },
+            { label: `Run ${new Date(r.createdAt).toLocaleString()}` },
+          ]}
+        />
         <button
           class="fingerprint"
           title={drift ? 'Snapshot differs from current chat definition' : 'Chat definition fingerprint'}
