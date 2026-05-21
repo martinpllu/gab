@@ -1,5 +1,5 @@
-import type { Agent, Chat, Message } from '../types';
-import { addMessage, runState, chats, uid } from '../state/signals';
+import type { Agent, ChatDefinition, Message, Run } from '../types';
+import { addMessageToRun, runState, runs, uid } from '../state/signals';
 import { buildMessagesForAgent } from './history';
 import { chatCompletion } from '../api/openrouter';
 
@@ -34,52 +34,56 @@ function shuffle<T>(arr: T[], rand: () => number): T[] {
   return out;
 }
 
-export function pickNextAgent(chat: Chat): Agent | null {
-  const mainAgents = chat.agents
+export function pickNextAgent(
+  def: ChatDefinition,
+  messageCount: number,
+  seedKey: string,
+): Agent | null {
+  const mainAgents = def.agents
     .filter((a) => !a.afterEach)
     .sort((a, b) => a.order - b.order);
-  const afterAgents = chat.agents
+  const afterAgents = def.agents
     .filter((a) => a.afterEach)
     .sort((a, b) => a.order - b.order);
 
   if (mainAgents.length === 0) return null;
 
   const block = 1 + afterAgents.length;
-  const n = chat.messages.length;
-  const subIdx = n % block;
-  const mainStepIndex = Math.floor(n / block);
+  const subIdx = messageCount % block;
+  const mainStepIndex = Math.floor(messageCount / block);
   const cycleNum = Math.floor(mainStepIndex / mainAgents.length);
   const mainPos = mainStepIndex % mainAgents.length;
 
   if (subIdx === 0) {
-    const cycleOrder = chat.randomize
-      ? shuffle(mainAgents, mulberry32(hashString(chat.id + ':' + cycleNum)))
+    const cycleOrder = def.randomize
+      ? shuffle(mainAgents, mulberry32(hashString(seedKey + ':' + cycleNum)))
       : mainAgents;
     return cycleOrder[mainPos]!;
   }
   return afterAgents[subIdx - 1]!;
 }
 
-export async function runLoop(chatId: string): Promise<void> {
+export async function runLoop(runId: string, turnsOverride?: number | null): Promise<void> {
   if (runState.value !== 'idle') return;
   runState.value = 'running';
   try {
-    const startN =
-      chats.value.find((c) => c.id === chatId)?.messages.length ?? 0;
+    const startN = runs.value.find((r) => r.id === runId)?.messages.length ?? 0;
     let executed = 0;
     while (runState.value === 'running') {
-      const c = chats.value.find((x) => x.id === chatId);
-      if (!c) break;
+      const r: Run | undefined = runs.value.find((x) => x.id === runId);
+      if (!r) break;
 
-      const limit = c.turnsRequested ?? SOFT_TURN_CAP;
+      const requested =
+        turnsOverride !== undefined ? turnsOverride : r.chatSnapshot.turnsRequested;
+      const limit = requested ?? SOFT_TURN_CAP;
       if (executed >= limit) break;
-      if (c.turnsRequested == null && c.messages.length - startN >= SOFT_TURN_CAP) break;
+      if (requested == null && r.messages.length - startN >= SOFT_TURN_CAP) break;
 
-      const agent = pickNextAgent(c);
+      const agent = pickNextAgent(r.chatSnapshot, r.messages.length, r.id);
       if (!agent) break;
 
-      const messages = buildMessagesForAgent(c, agent);
-      const model = agent.model ?? c.defaultModel;
+      const messages = buildMessagesForAgent(r.chatSnapshot, r.messages, agent);
+      const model = agent.model ?? r.chatSnapshot.defaultModel;
       const content = await chatCompletion({ model, messages, user: agent.id });
 
       const m: Message = {
@@ -90,7 +94,7 @@ export async function runLoop(chatId: string): Promise<void> {
         model,
         timestamp: Date.now(),
       };
-      addMessage(chatId, m);
+      addMessageToRun(runId, m);
       executed++;
     }
   } finally {

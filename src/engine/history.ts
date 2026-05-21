@@ -1,11 +1,15 @@
-import type { Agent, ChatMessage, Chat } from '../types';
+import type { Agent, ChatMessage, ChatDefinition, Message } from '../types';
 import { GLOBAL_SYSTEM_PROMPT } from '../prompts';
 
-export function buildMessagesForAgent(chat: Chat, agent: Agent): ChatMessage[] {
+export function buildMessagesForAgent(
+  def: ChatDefinition,
+  history: Message[],
+  agent: Agent,
+): ChatMessage[] {
   const system =
     GLOBAL_SYSTEM_PROMPT +
     '\n\n--- Chat ---\n' +
-    chat.chatPrompt +
+    def.chatPrompt +
     '\n\n--- Your persona ---\nYou are ' +
     agent.name +
     '. ' +
@@ -13,7 +17,7 @@ export function buildMessagesForAgent(chat: Chat, agent: Agent): ChatMessage[] {
 
   const messages: ChatMessage[] = [{ role: 'system', content: system }];
 
-  for (const m of chat.messages) {
+  for (const m of history) {
     if (m.agentId === agent.id) {
       messages.push({ role: 'assistant', content: m.content });
     } else {

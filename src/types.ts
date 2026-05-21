@@ -24,15 +24,27 @@ export interface Message {
   timestamp: number;
 }
 
-export interface Chat {
-  id: string;
+export interface ChatDefinition {
   name: string;
   chatPrompt: string;
   defaultModel: Model;
   agents: Agent[];
-  messages: Message[];
   randomize: boolean;
   turnsRequested: number | null;
+}
+
+export interface Chat extends ChatDefinition {
+  id: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Run {
+  id: string;
+  chatId: string;
+  chatSnapshot: ChatDefinition;
+  fingerprint: string;
+  messages: Message[];
   createdAt: number;
   updatedAt: number;
 }
@@ -43,7 +55,12 @@ export type AuthState =
 
 export type RunState = 'idle' | 'running' | 'stopping';
 
-export type Route = 'login' | 'list' | 'edit' | 'run';
+export type Route =
+  | { kind: 'login' }
+  | { kind: 'list' }
+  | { kind: 'edit'; chatId: string }
+  | { kind: 'runs'; chatId: string }
+  | { kind: 'run'; chatId: string; runId: string };
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';

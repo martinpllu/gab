@@ -1,4 +1,5 @@
-import { openRouterKey, openRouterVia, setVerifier, takeVerifier, route } from '../state/signals';
+import { openRouterKey, openRouterVia, setVerifier, takeVerifier } from '../state/signals';
+import { navigate } from '../router';
 
 const AUTH_URL = 'https://openrouter.ai/auth';
 const EXCHANGE_URL = 'https://openrouter.ai/api/v1/auth/keys';
@@ -56,12 +57,12 @@ export async function handleCallback(code: string): Promise<void> {
   if (!data.key) throw new Error('Token exchange response missing "key"');
   openRouterKey.value = data.key;
   openRouterVia.value = 'oauth';
-  route.value = 'list';
   history.replaceState(null, '', '/');
+  navigate({ kind: 'list' }, { replace: true });
 }
 
 export function setManualKey(key: string) {
   openRouterKey.value = key.trim();
   openRouterVia.value = 'manual';
-  route.value = 'list';
+  navigate({ kind: 'list' });
 }

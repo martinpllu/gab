@@ -95,5 +95,11 @@ input:disabled, textarea:disabled, select:disabled { background: #f3f4f6; color:
 .bubble-content { white-space: pre-wrap; }
 
 .turn-counter { color: var(--muted); font-size: 13px; }
+.turns-input { width: 64px; }
+.fingerprint { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; border: none; cursor: pointer; }
+.snapshot-panel { border: 1px solid var(--border, #ddd); border-radius: 6px; padding: 12px; margin-bottom: 12px; background: rgba(0,0,0,0.02); font-size: 13px; }
+.snapshot-row { margin-bottom: 6px; }
+.snapshot-prompt { white-space: pre-wrap; background: rgba(0,0,0,0.04); padding: 6px 8px; border-radius: 4px; margin: 4px 0 0; font-size: 12px; }
+.snapshot-agents { margin: 4px 0 0; padding-left: 20px; }
 
 h3 { margin-top: 24px; margin-bottom: 8px; }

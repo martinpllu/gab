@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Agent, Model, Chat, Message } from '../types';
+import type { Agent, Model, Message, Chat } from '../types';
 import { MODELS, MODEL_LABELS } from '../types';
 import { reorderMainAgents, updateAgent, deleteAgent } from '../state/signals';
 
@@ -172,14 +172,14 @@ export function TurnOrderList(props: { chat: Chat; disabled: boolean }) {
   );
 }
 
-export function Transcript(props: { chat: Chat; agents: Agent[] }) {
-  const { chat, agents } = props;
+export function Transcript(props: { messages: Message[]; agents: Agent[] }) {
+  const { messages, agents } = props;
   const ref = useRef<HTMLDivElement>(null);
   const byId = new Map(agents.map((a) => [a.id, a] as const));
 
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
-  }, [chat.messages.length]);
+  }, [messages.length]);
 
   function colorFor(agentId: string): string {
     const i = agents.findIndex((a) => a.id === agentId);
@@ -190,10 +190,10 @@ export function Transcript(props: { chat: Chat; agents: Agent[] }) {
 
   return (
     <div class="transcript" ref={ref}>
-      {chat.messages.length === 0 && (
+      {messages.length === 0 && (
         <div class="hint">No messages yet. Click Run to start.</div>
       )}
-      {chat.messages.map((m: Message) => {
+      {messages.map((m: Message) => {
         const a = byId.get(m.agentId);
         return (
           <div class="bubble" key={m.id} style={{ background: colorFor(m.agentId) }}>

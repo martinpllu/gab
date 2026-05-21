@@ -1,11 +1,12 @@
-import { currentChat, route, updateChat, addAgent, runState } from '../state/signals';
+import { currentChat, updateChat, addAgent, runState } from '../state/signals';
 import { ModelPicker, TurnOrderList } from './widgets';
+import { navigate } from '../router';
 import type { Model } from '../types';
 
 export function ChatEditScreen() {
   const c = currentChat.value;
   if (!c) {
-    route.value = 'list';
+    navigate({ kind: 'list' }, { replace: true });
     return null;
   }
   const disabled = runState.value !== 'idle';
@@ -14,10 +15,10 @@ export function ChatEditScreen() {
   return (
     <div class="screen edit">
       <header class="topbar">
-        <button class="link" onClick={() => (route.value = 'list')}>← Back</button>
+        <button class="link" onClick={() => navigate({ kind: 'list' })}>← Back</button>
         <h2>Edit chat</h2>
         <div class="spacer" />
-        <button class="primary" onClick={() => (route.value = 'run')}>Run →</button>
+        <button class="primary" onClick={() => navigate({ kind: 'runs', chatId: c.id })}>Runs →</button>
       </header>
 
       <div class="field">

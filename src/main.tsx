@@ -2,6 +2,7 @@ import { render } from 'preact';
 import { App } from './components/App';
 import { authState, route } from './state/signals';
 import { handleCallback } from './auth/pkce';
+import { navigate } from './router';
 
 async function boot() {
   const params = new URLSearchParams(window.location.search);
@@ -14,8 +15,8 @@ async function boot() {
       alert('Sign-in failed: ' + (e instanceof Error ? e.message : String(e)));
       history.replaceState(null, '', '/');
     }
-  } else if (authState.value.kind === 'authed' && route.value === 'login') {
-    route.value = 'list';
+  } else if (authState.value.kind === 'authed' && route.value.kind === 'login') {
+    navigate({ kind: 'list' }, { replace: true });
   }
   render(<App />, document.getElementById('app')!);
 }
