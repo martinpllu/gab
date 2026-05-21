@@ -1,12 +1,12 @@
 import { signal, computed, effect } from '@preact/signals';
-import type { AuthState, RunState, Route, Scenario, Agent, Utterance, Model } from '../types';
+import type { AuthState, RunState, Route, Chat, Agent, Message, Model } from '../types';
 
 const K = {
   schemaVersion: 'gab.schema_version',
   key: 'gab.openrouter_key',
   via: 'gab.openrouter_via',
-  scenarios: 'gab.scenarios',
-  currentId: 'gab.current_scenario_id',
+  chats: 'gab.chats',
+  currentId: 'gab.current_chat_id',
   verifier: 'gab.pkce_verifier',
 } as const;
 
@@ -30,8 +30,8 @@ export const openRouterKey = signal<string | null>(loadString(K.key));
 export const openRouterVia = signal<'oauth' | 'manual' | null>(
   loadString(K.via) as 'oauth' | 'manual' | null,
 );
-export const scenarios = signal<Scenario[]>(loadJSON<Scenario[]>(K.scenarios, []));
-export const currentScenarioId = signal<string | null>(loadString(K.currentId));
+export const chats = signal<Chat[]>(loadJSON<Chat[]>(K.chats, []));
+export const currentChatId = signal<string | null>(loadString(K.currentId));
 export const runState = signal<RunState>('idle');
 export const route = signal<Route>('login');
 
@@ -42,10 +42,10 @@ export const authState = computed<AuthState>(() => {
   return { kind: 'anonymous' };
 });
 
-export const currentScenario = computed<Scenario | null>(() => {
-  const id = currentScenarioId.value;
+export const currentChat = computed<Chat | null>(() => {
+  const id = currentChatId.value;
   if (!id) return null;
-  return scenarios.value.find((s) => s.id === id) ?? null;
+  return chats.value.find((c) => c.id === id) ?? null;
 });
 
 function debounce<T>(fn: (v: T) => void, ms: number) {
@@ -56,11 +56,11 @@ function debounce<T>(fn: (v: T) => void, ms: number) {
   };
 }
 
-const writeScenarios = debounce<Scenario[]>(
-  (v) => localStorage.setItem(K.scenarios, JSON.stringify(v)),
+const writeChats = debounce<Chat[]>(
+  (v) => localStorage.setItem(K.chats, JSON.stringify(v)),
   200,
 );
-effect(() => writeScenarios(scenarios.value));
+effect(() => writeChats(chats.value));
 
 effect(() => {
   const v = openRouterKey.value;
@@ -73,7 +73,7 @@ effect(() => {
   else localStorage.setItem(K.via, v);
 });
 effect(() => {
-  const v = currentScenarioId.value;
+  const v = currentChatId.value;
   if (v == null) localStorage.removeItem(K.currentId);
   else localStorage.setItem(K.currentId, v);
 });
@@ -101,90 +101,90 @@ export function signOut() {
   route.value = 'login';
 }
 
-function replaceScenarios(next: Scenario[]) {
-  scenarios.value = next;
+function replaceChats(next: Chat[]) {
+  chats.value = next;
 }
 
-export function createScenario(): Scenario {
+export function createChat(): Chat {
   const now = Date.now();
-  const s: Scenario = {
+  const c: Chat = {
     id: uid(),
-    name: 'Untitled gab',
-    scenarioPrompt: '',
+    name: 'Untitled chat',
+    chatPrompt: '',
     defaultModel: 'google/gemini-3.1-flash-lite' as Model,
     agents: [],
-    utterances: [],
+    messages: [],
     randomize: false,
     turnsRequested: 6,
     createdAt: now,
     updatedAt: now,
   };
-  replaceScenarios([s, ...scenarios.value]);
-  return s;
+  replaceChats([c, ...chats.value]);
+  return c;
 }
 
-export function updateScenario(id: string, patch: Partial<Scenario>) {
-  replaceScenarios(
-    scenarios.value.map((s) =>
-      s.id === id ? { ...s, ...patch, updatedAt: Date.now() } : s,
+export function updateChat(id: string, patch: Partial<Chat>) {
+  replaceChats(
+    chats.value.map((c) =>
+      c.id === id ? { ...c, ...patch, updatedAt: Date.now() } : c,
     ),
   );
 }
 
-export function deleteScenario(id: string) {
-  replaceScenarios(scenarios.value.filter((s) => s.id !== id));
-  if (currentScenarioId.value === id) currentScenarioId.value = null;
+export function deleteChat(id: string) {
+  replaceChats(chats.value.filter((c) => c.id !== id));
+  if (currentChatId.value === id) currentChatId.value = null;
 }
 
-export function addAgent(scenarioId: string): Agent {
-  const s = scenarios.value.find((x) => x.id === scenarioId);
-  if (!s) throw new Error('scenario not found');
-  const maxOrder = s.agents
+export function addAgent(chatId: string): Agent {
+  const c = chats.value.find((x) => x.id === chatId);
+  if (!c) throw new Error('chat not found');
+  const maxOrder = c.agents
     .filter((a) => !a.afterEach)
     .reduce((m, a) => Math.max(m, a.order), -1);
   const agent: Agent = {
     id: uid(),
-    name: `Agent ${s.agents.length + 1}`,
+    name: `Agent ${c.agents.length + 1}`,
     personaPrompt: '',
     model: null,
     afterEach: false,
     order: maxOrder + 1,
   };
-  updateScenario(scenarioId, { agents: [...s.agents, agent] });
+  updateChat(chatId, { agents: [...c.agents, agent] });
   return agent;
 }
 
-export function updateAgent(scenarioId: string, agentId: string, patch: Partial<Agent>) {
-  const s = scenarios.value.find((x) => x.id === scenarioId);
-  if (!s) return;
-  updateScenario(scenarioId, {
-    agents: s.agents.map((a) => (a.id === agentId ? { ...a, ...patch } : a)),
+export function updateAgent(chatId: string, agentId: string, patch: Partial<Agent>) {
+  const c = chats.value.find((x) => x.id === chatId);
+  if (!c) return;
+  updateChat(chatId, {
+    agents: c.agents.map((a) => (a.id === agentId ? { ...a, ...patch } : a)),
   });
 }
 
-export function deleteAgent(scenarioId: string, agentId: string) {
-  const s = scenarios.value.find((x) => x.id === scenarioId);
-  if (!s) return;
-  updateScenario(scenarioId, { agents: s.agents.filter((a) => a.id !== agentId) });
+export function deleteAgent(chatId: string, agentId: string) {
+  const c = chats.value.find((x) => x.id === chatId);
+  if (!c) return;
+  updateChat(chatId, { agents: c.agents.filter((a) => a.id !== agentId) });
 }
 
-export function reorderMainAgents(scenarioId: string, orderedIds: string[]) {
-  const s = scenarios.value.find((x) => x.id === scenarioId);
-  if (!s) return;
+export function reorderMainAgents(chatId: string, orderedIds: string[]) {
+  const c = chats.value.find((x) => x.id === chatId);
+  if (!c) return;
   const orderMap = new Map(orderedIds.map((id, i) => [id, i] as const));
-  updateScenario(scenarioId, {
-    agents: s.agents.map((a) =>
+  updateChat(chatId, {
+    agents: c.agents.map((a) =>
       a.afterEach ? a : { ...a, order: orderMap.get(a.id) ?? a.order },
     ),
   });
 }
 
-export function addUtterance(scenarioId: string, u: Utterance) {
-  const s = scenarios.value.find((x) => x.id === scenarioId);
-  if (!s) return;
-  updateScenario(scenarioId, { utterances: [...s.utterances, u] });
+export function addMessage(chatId: string, m: Message) {
+  const c = chats.value.find((x) => x.id === chatId);
+  if (!c) return;
+  updateChat(chatId, { messages: [...c.messages, m] });
 }
 
-export function clearUtterances(scenarioId: string) {
-  updateScenario(scenarioId, { utterances: [] });
+export function clearMessages(chatId: string) {
+  updateChat(chatId, { messages: [] });
 }

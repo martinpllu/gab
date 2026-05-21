@@ -15,9 +15,8 @@ export interface Agent {
   order: number;
 }
 
-export interface Utterance {
+export interface Message {
   id: string;
-  turn: number;
   agentId: string;
   agentNameSnapshot: string;
   content: string;
@@ -25,13 +24,13 @@ export interface Utterance {
   timestamp: number;
 }
 
-export interface Scenario {
+export interface Chat {
   id: string;
   name: string;
-  scenarioPrompt: string;
+  chatPrompt: string;
   defaultModel: Model;
   agents: Agent[];
-  utterances: Utterance[];
+  messages: Message[];
   randomize: boolean;
   turnsRequested: number | null;
   createdAt: number;

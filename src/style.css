@@ -60,14 +60,14 @@ input:disabled, textarea:disabled, select:disabled { background: #f3f4f6; color:
 .hint { padding: 12px; background: var(--hint-bg); border-radius: 6px; color: var(--muted); }
 .error { padding: 12px; background: #fee2e2; color: #991b1b; border-radius: 6px; margin: 12px 0; white-space: pre-wrap; }
 
-.scenario-list { display: flex; flex-direction: column; gap: 8px; }
-.scenario-row {
+.chat-list { display: flex; flex-direction: column; gap: 8px; }
+.chat-row {
   display: flex; align-items: center; gap: 12px;
   padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: white;
 }
-.scenario-main { flex: 1; }
-.scenario-name { font-weight: 600; }
-.scenario-meta { font-size: 13px; color: var(--muted); }
+.chat-main { flex: 1; }
+.chat-name { font-weight: 600; }
+.chat-meta { font-size: 13px; color: var(--muted); }
 
 .turn-order { margin: 16px 0; }
 .section-label { font-size: 13px; color: var(--muted); margin: 8px 0; text-transform: uppercase; letter-spacing: 0.04em; }

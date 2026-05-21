@@ -1,21 +1,21 @@
-import { currentScenario, route, updateScenario, addAgent, runState } from '../state/signals';
+import { currentChat, route, updateChat, addAgent, runState } from '../state/signals';
 import { ModelPicker, TurnOrderList } from './widgets';
 import type { Model } from '../types';
 
-export function ScenarioEditScreen() {
-  const s = currentScenario.value;
-  if (!s) {
+export function ChatEditScreen() {
+  const c = currentChat.value;
+  if (!c) {
     route.value = 'list';
     return null;
   }
   const disabled = runState.value !== 'idle';
-  const turnsValue = s.turnsRequested ?? '';
+  const turnsValue = c.turnsRequested ?? '';
 
   return (
     <div class="screen edit">
       <header class="topbar">
         <button class="link" onClick={() => (route.value = 'list')}>← Back</button>
-        <h2>Edit gab</h2>
+        <h2>Edit chat</h2>
         <div class="spacer" />
         <button class="primary" onClick={() => (route.value = 'run')}>Run →</button>
       </header>
@@ -24,24 +24,24 @@ export function ScenarioEditScreen() {
         <label>Name</label>
         <input
           type="text"
-          value={s.name}
+          value={c.name}
           disabled={disabled}
           onInput={(e) =>
-            updateScenario(s.id, { name: (e.target as HTMLInputElement).value })
+            updateChat(c.id, { name: (e.target as HTMLInputElement).value })
           }
         />
       </div>
 
       <div class="field">
-        <label>Scenario prompt</label>
+        <label>Chat prompt</label>
         <textarea
           rows={4}
-          placeholder="Describe the setting and what the agents are doing — shared across all agents in this gab."
-          value={s.scenarioPrompt}
+          placeholder="Describe the setting and what the agents are doing — shared across all agents in this chat."
+          value={c.chatPrompt}
           disabled={disabled}
           onInput={(e) =>
-            updateScenario(s.id, {
-              scenarioPrompt: (e.target as HTMLTextAreaElement).value,
+            updateChat(c.id, {
+              chatPrompt: (e.target as HTMLTextAreaElement).value,
             })
           }
         />
@@ -51,9 +51,9 @@ export function ScenarioEditScreen() {
         <div class="field">
           <label>Default model</label>
           <ModelPicker
-            value={s.defaultModel}
+            value={c.defaultModel}
             disabled={disabled}
-            onChange={(m: Model) => updateScenario(s.id, { defaultModel: m })}
+            onChange={(m: Model) => updateChat(c.id, { defaultModel: m })}
           />
         </div>
         <div class="field">
@@ -66,17 +66,17 @@ export function ScenarioEditScreen() {
             disabled={disabled}
             onInput={(e) => {
               const v = (e.target as HTMLInputElement).value;
-              updateScenario(s.id, { turnsRequested: v === '' ? null : Number(v) });
+              updateChat(c.id, { turnsRequested: v === '' ? null : Number(v) });
             }}
           />
         </div>
         <label class="checkbox">
           <input
             type="checkbox"
-            checked={s.randomize}
+            checked={c.randomize}
             disabled={disabled}
             onChange={(e) =>
-              updateScenario(s.id, {
+              updateChat(c.id, {
                 randomize: (e.target as HTMLInputElement).checked,
               })
             }
@@ -86,8 +86,8 @@ export function ScenarioEditScreen() {
       </div>
 
       <h3>Agents</h3>
-      <TurnOrderList scenario={s} disabled={disabled} />
-      <button class="primary" disabled={disabled} onClick={() => addAgent(s.id)}>
+      <TurnOrderList chat={c} disabled={disabled} />
+      <button class="primary" disabled={disabled} onClick={() => addAgent(c.id)}>
         + Add agent
       </button>
     </div>

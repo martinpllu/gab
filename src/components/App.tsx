@@ -1,8 +1,8 @@
 import { authState, route } from '../state/signals';
 import { LoginScreen } from './LoginScreen';
-import { ScenarioListScreen } from './ScenarioListScreen';
-import { ScenarioEditScreen } from './ScenarioEditScreen';
-import { ScenarioRunScreen } from './ScenarioRunScreen';
+import { ChatListScreen } from './ChatListScreen';
+import { ChatEditScreen } from './ChatEditScreen';
+import { ChatRunScreen } from './ChatRunScreen';
 
 export function App() {
   if (authState.value.kind === 'anonymous') {
@@ -11,10 +11,10 @@ export function App() {
   switch (route.value) {
     case 'login':
     case 'list':
-      return <ScenarioListScreen />;
+      return <ChatListScreen />;
     case 'edit':
-      return <ScenarioEditScreen />;
+      return <ChatEditScreen />;
     case 'run':
-      return <ScenarioRunScreen />;
+      return <ChatRunScreen />;
   }
 }

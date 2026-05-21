@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Agent, Model, Scenario, Utterance } from '../types';
+import type { Agent, Model, Chat, Message } from '../types';
 import { MODELS, MODEL_LABELS } from '../types';
 import { reorderMainAgents, updateAgent, deleteAgent } from '../state/signals';
 
@@ -48,11 +48,11 @@ export function ModelOverridePicker(props: {
 }
 
 export function AgentEditor(props: {
-  scenarioId: string;
+  chatId: string;
   agent: Agent;
   disabled: boolean;
 }) {
-  const { scenarioId, agent, disabled } = props;
+  const { chatId, agent, disabled } = props;
   return (
     <div class="agent-card">
       <div class="row">
@@ -62,7 +62,7 @@ export function AgentEditor(props: {
           value={agent.name}
           disabled={disabled}
           onInput={(e) =>
-            updateAgent(scenarioId, agent.id, {
+            updateAgent(chatId, agent.id, {
               name: (e.target as HTMLInputElement).value,
             })
           }
@@ -73,7 +73,7 @@ export function AgentEditor(props: {
             checked={agent.afterEach}
             disabled={disabled}
             onChange={(e) =>
-              updateAgent(scenarioId, agent.id, {
+              updateAgent(chatId, agent.id, {
                 afterEach: (e.target as HTMLInputElement).checked,
               })
             }
@@ -83,12 +83,12 @@ export function AgentEditor(props: {
         <ModelOverridePicker
           value={agent.model}
           disabled={disabled}
-          onChange={(m) => updateAgent(scenarioId, agent.id, { model: m })}
+          onChange={(m) => updateAgent(chatId, agent.id, { model: m })}
         />
         <button
           class="danger"
           disabled={disabled}
-          onClick={() => deleteAgent(scenarioId, agent.id)}
+          onClick={() => deleteAgent(chatId, agent.id)}
         >
           delete
         </button>
@@ -99,7 +99,7 @@ export function AgentEditor(props: {
         value={agent.personaPrompt}
         disabled={disabled}
         onInput={(e) =>
-          updateAgent(scenarioId, agent.id, {
+          updateAgent(chatId, agent.id, {
             personaPrompt: (e.target as HTMLTextAreaElement).value,
           })
         }
@@ -109,12 +109,12 @@ export function AgentEditor(props: {
   );
 }
 
-export function TurnOrderList(props: { scenario: Scenario; disabled: boolean }) {
-  const { scenario, disabled } = props;
-  const mainAgents = scenario.agents
+export function TurnOrderList(props: { chat: Chat; disabled: boolean }) {
+  const { chat, disabled } = props;
+  const mainAgents = chat.agents
     .filter((a) => !a.afterEach)
     .sort((a, b) => a.order - b.order);
-  const afterAgents = scenario.agents.filter((a) => a.afterEach);
+  const afterAgents = chat.agents.filter((a) => a.afterEach);
   const [dragId, setDragId] = useState<string | null>(null);
 
   function onDrop(targetId: string) {
@@ -126,14 +126,14 @@ export function TurnOrderList(props: { scenario: Scenario; disabled: boolean }) 
     const next = ids.slice();
     next.splice(from, 1);
     next.splice(to, 0, dragId);
-    reorderMainAgents(scenario.id, next);
+    reorderMainAgents(chat.id, next);
     setDragId(null);
   }
 
   return (
     <div class="turn-order">
       <div class="section-label">
-        Main order {scenario.randomize ? '(randomized per cycle)' : '(drag to reorder)'}
+        Main order {chat.randomize ? '(randomized per cycle)' : '(drag to reorder)'}
       </div>
       <ul class="order-list">
         {mainAgents.map((a) => (
@@ -147,7 +147,7 @@ export function TurnOrderList(props: { scenario: Scenario; disabled: boolean }) 
             onDragEnd={() => setDragId(null)}
           >
             <span class="handle">≡</span>
-            <AgentEditor scenarioId={scenario.id} agent={a} disabled={disabled} />
+            <AgentEditor chatId={chat.id} agent={a} disabled={disabled} />
           </li>
         ))}
         {mainAgents.length === 0 && (
@@ -162,7 +162,7 @@ export function TurnOrderList(props: { scenario: Scenario; disabled: boolean }) 
             {afterAgents.map((a) => (
               <li key={a.id} class="order-item after-each">
                 <span class="handle">↺</span>
-                <AgentEditor scenarioId={scenario.id} agent={a} disabled={disabled} />
+                <AgentEditor chatId={chat.id} agent={a} disabled={disabled} />
               </li>
             ))}
           </ul>
@@ -172,14 +172,14 @@ export function TurnOrderList(props: { scenario: Scenario; disabled: boolean }) 
   );
 }
 
-export function Transcript(props: { scenario: Scenario; agents: Agent[] }) {
-  const { scenario, agents } = props;
+export function Transcript(props: { chat: Chat; agents: Agent[] }) {
+  const { chat, agents } = props;
   const ref = useRef<HTMLDivElement>(null);
   const byId = new Map(agents.map((a) => [a.id, a] as const));
 
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
-  }, [scenario.utterances.length]);
+  }, [chat.messages.length]);
 
   function colorFor(agentId: string): string {
     const i = agents.findIndex((a) => a.id === agentId);
@@ -190,18 +190,18 @@ export function Transcript(props: { scenario: Scenario; agents: Agent[] }) {
 
   return (
     <div class="transcript" ref={ref}>
-      {scenario.utterances.length === 0 && (
-        <div class="hint">No utterances yet. Click Run to start.</div>
+      {chat.messages.length === 0 && (
+        <div class="hint">No messages yet. Click Run to start.</div>
       )}
-      {scenario.utterances.map((u: Utterance) => {
-        const a = byId.get(u.agentId);
+      {chat.messages.map((m: Message) => {
+        const a = byId.get(m.agentId);
         return (
-          <div class="bubble" key={u.id} style={{ background: colorFor(u.agentId) }}>
+          <div class="bubble" key={m.id} style={{ background: colorFor(m.agentId) }}>
             <div class="bubble-meta">
-              <strong>{a?.name ?? u.agentNameSnapshot}</strong>
-              <span class="model-label">{MODEL_LABELS[u.model] ?? u.model}</span>
+              <strong>{a?.name ?? m.agentNameSnapshot}</strong>
+              <span class="model-label">{MODEL_LABELS[m.model] ?? m.model}</span>
             </div>
-            <div class="bubble-content">{u.content}</div>
+            <div class="bubble-content">{m.content}</div>
           </div>
         );
       })}
