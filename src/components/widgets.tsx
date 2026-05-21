@@ -183,9 +183,9 @@ export function Transcript(props: { messages: Message[]; agents: Agent[] }) {
 
   function colorFor(agentId: string): string {
     const i = agents.findIndex((a) => a.id === agentId);
-    const hues = [210, 350, 130, 40, 280, 180];
+    const hues = [25, 200, 145, 270, 340, 50];
     const h = hues[((i % hues.length) + hues.length) % hues.length];
-    return `hsl(${h}, 60%, 92%)`;
+    return `hsl(${h}, 38%, 96%)`;
   }
 
   return (
