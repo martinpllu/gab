@@ -127,9 +127,11 @@ export const runsForCurrentChat = computed<Run[]>(() => {
     .sort((a, b) => b.createdAt - a.createdAt);
 });
 
+export const pendingExpandDefFor = signal<string | null>(null);
+
 effect(() => {
   const r = route.value;
-  if (r.kind === 'edit' || r.kind === 'runs' || r.kind === 'run') {
+  if (r.kind === 'runs' || r.kind === 'run') {
     if (!chats.value.some((c) => c.id === r.chatId)) {
       navigate({ kind: 'list' }, { replace: true });
       return;

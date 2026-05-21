@@ -4,7 +4,6 @@ export function formatHash(route: Route): string {
   switch (route.kind) {
     case 'login': return '#/login';
     case 'list': return '#/chats';
-    case 'edit': return `#/chats/${route.chatId}/edit`;
     case 'runs': return `#/chats/${route.chatId}/runs`;
     case 'run': return `#/chats/${route.chatId}/runs/${route.runId}`;
   }
@@ -20,7 +19,7 @@ export function parseHash(hash: string): Route {
   if (parts[0] === 'chats' && parts[1]) {
     const chatId = parts[1];
     if (parts.length === 2) return { kind: 'runs', chatId };
-    if (parts[2] === 'edit' && parts.length === 3) return { kind: 'edit', chatId };
+    if (parts[2] === 'edit' && parts.length === 3) return { kind: 'runs', chatId };
     if (parts[2] === 'runs') {
       if (parts.length === 3) return { kind: 'runs', chatId };
       if (parts.length === 4 && parts[3]) {

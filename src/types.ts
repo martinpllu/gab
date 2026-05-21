@@ -58,7 +58,6 @@ export type RunState = 'idle' | 'running' | 'stopping';
 export type Route =
   | { kind: 'login' }
   | { kind: 'list' }
-  | { kind: 'edit'; chatId: string }
   | { kind: 'runs'; chatId: string }
   | { kind: 'run'; chatId: string; runId: string };
 

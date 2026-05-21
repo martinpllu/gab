@@ -330,6 +330,113 @@ select {
   box-shadow: 0 4px 14px -8px rgba(28, 25, 23, 0.12);
   transform: translateY(-1px);
 }
+button.chat-row-button {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(28, 25, 23, 0.04);
+}
+button.chat-row-button:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+button.chat-row-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 0 rgba(28, 25, 23, 0.04);
+}
+
+.chat-row-arrow {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: 8px;
+  color: var(--muted-soft);
+  border-radius: 999px;
+  transition: color 180ms var(--ease), transform 220ms var(--ease),
+    background 180ms var(--ease);
+}
+.chat-row-arrow svg { display: block; }
+.chat-row-button:hover:not(:disabled) .chat-row-arrow {
+  color: var(--accent);
+  background: var(--accent-tint);
+  transform: translateX(4px);
+}
+.chat-row-button:active:not(:disabled) .chat-row-arrow {
+  transform: translateX(2px);
+}
+
+/* ─── two-stage confirm button ──────────────────────────── */
+button.danger.armed {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-tint);
+}
+button.danger.armed:hover:not(:disabled) {
+  background: #a01616;
+  border-color: #a01616;
+}
+
+/* ─── collapsible chat definition ───────────────────────── */
+.chat-def {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  margin-bottom: 22px;
+  overflow: hidden;
+}
+button.chat-def-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  text-align: left;
+  box-shadow: none;
+  cursor: pointer;
+}
+button.chat-def-header:hover:not(:disabled) {
+  background: rgba(28, 25, 23, 0.03);
+  border: none;
+  box-shadow: none;
+}
+.chevron {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 160ms var(--ease);
+  width: 12px;
+}
+.chevron.open { transform: rotate(90deg); }
+.chat-def-summary {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.chat-def-body {
+  padding: 4px 18px 18px;
+  border-top: 1px solid var(--rule);
+  animation: fadeUp 220ms var(--ease) both;
+}
+.chat-def-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
 .chat-main { flex: 1; min-width: 0; }
 .chat-name {
   font-family: var(--font-display);

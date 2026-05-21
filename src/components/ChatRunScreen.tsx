@@ -4,9 +4,10 @@ import {
   currentChat,
   runState,
   clearRunMessages,
+  deleteRun,
 } from '../state/signals';
 import { runLoop, requestStop } from '../engine/scheduler';
-import { Transcript } from './widgets';
+import { Transcript, ConfirmButton } from './widgets';
 import { fingerprintDefinition } from '../engine/fingerprint';
 import { navigate } from '../router';
 import { MODEL_LABELS } from '../types';
@@ -83,14 +84,18 @@ export function ChatRunScreen() {
             {runState.value === 'stopping' ? 'Stopping…' : '■ Stop'}
           </button>
         )}
-        <button
-          onClick={() => {
-            if (confirm('Clear messages in this run?')) clearRunMessages(r.id);
-          }}
+        <ConfirmButton
+          label="Clear"
+          confirmLabel="Click again to clear"
           disabled={runState.value !== 'idle'}
-        >
-          Clear
-        </button>
+          onConfirm={() => clearRunMessages(r.id)}
+        />
+        <ConfirmButton
+          label="Delete run"
+          confirmLabel="Click again to delete run"
+          disabled={runState.value !== 'idle'}
+          onConfirm={() => deleteRun(r.id)}
+        />
       </header>
 
       {snapshotOpen && <SnapshotPanel run={r} />}

@@ -3,6 +3,47 @@ import type { Agent, Model, Message, Chat } from '../types';
 import { MODELS, MODEL_LABELS } from '../types';
 import { reorderMainAgents, updateAgent, deleteAgent } from '../state/signals';
 
+export function ConfirmButton(props: {
+  onConfirm: () => void;
+  label?: string;
+  confirmLabel?: string;
+  disabled?: boolean;
+  className?: string;
+  title?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  function disarm() {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    setArmed(false);
+  }
+  function onClick() {
+    if (armed) {
+      disarm();
+      props.onConfirm();
+      return;
+    }
+    setArmed(true);
+    timer.current = setTimeout(() => setArmed(false), 3000);
+  }
+  const cls = armed
+    ? `danger armed ${props.className ?? ''}`
+    : `danger ${props.className ?? ''}`;
+  return (
+    <button
+      type="button"
+      class={cls}
+      disabled={props.disabled}
+      onClick={onClick}
+      onBlur={disarm}
+      title={props.title}
+    >
+      {armed ? (props.confirmLabel ?? 'Click again to confirm') : (props.label ?? 'Delete')}
+    </button>
+  );
+}
+
 export function ModelPicker(props: {
   value: Model;
   onChange: (m: Model) => void;

@@ -1,18 +1,11 @@
-import { chats, runs, createChat, deleteChat, signOut } from '../state/signals';
+import { chats, runs, createChat, signOut, pendingExpandDefFor } from '../state/signals';
 import { navigate } from '../router';
 
 export function ChatListScreen() {
   function onNew() {
     const c = createChat();
-    navigate({ kind: 'edit', chatId: c.id });
-  }
-
-  function onEdit(id: string) {
-    navigate({ kind: 'edit', chatId: id });
-  }
-
-  function onRuns(id: string) {
-    navigate({ kind: 'runs', chatId: id });
+    pendingExpandDefFor.value = c.id;
+    navigate({ kind: 'runs', chatId: c.id });
   }
 
   return (
@@ -30,7 +23,12 @@ export function ChatListScreen() {
         {chats.value.map((c) => {
           const runCount = runs.value.filter((r) => r.chatId === c.id).length;
           return (
-            <div class="chat-row" key={c.id}>
+            <button
+              type="button"
+              class="chat-row chat-row-button"
+              key={c.id}
+              onClick={() => navigate({ kind: 'runs', chatId: c.id })}
+            >
               <div class="chat-main">
                 <div class="chat-name">{c.name}</div>
                 <div class="chat-meta">
@@ -39,23 +37,13 @@ export function ChatListScreen() {
                   {' '}updated {new Date(c.updatedAt).toLocaleString()}
                 </div>
               </div>
-              <div class="row">
-                <button onClick={() => onEdit(c.id)}>Edit</button>
-                <button class="primary" onClick={() => onRuns(c.id)}>Runs</button>
-                <button
-                  class="danger"
-                  onClick={() => {
-                    const msg =
-                      runCount > 0
-                        ? `Delete "${c.name}" and its ${runCount} run${runCount === 1 ? '' : 's'}?`
-                        : `Delete "${c.name}"?`;
-                    if (confirm(msg)) deleteChat(c.id);
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
+              <span class="chat-row-arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14" />
+                  <path d="M13 6l6 6-6 6" />
+                </svg>
+              </span>
+            </button>
           );
         })}
       </div>
