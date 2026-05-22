@@ -10,7 +10,7 @@ import {
   pendingExpandDefFor,
 } from '../state/signals';
 import { fingerprintDefinition } from '../engine/fingerprint';
-import { ModelPicker, TurnOrderList, ConfirmButton, Breadcrumbs } from './widgets';
+import { ModelPicker, TurnOrderList, ConfirmButton, Breadcrumbs, formatDateTime } from './widgets';
 import { navigate } from '../router';
 import type { Model } from '../types';
 
@@ -40,18 +40,22 @@ export function RunsListScreen() {
 
   return (
     <div class="screen list">
-      <header class="topbar">
-        <Breadcrumbs
-          items={[
-            { label: 'Chats', route: { kind: 'list' } },
-            { label: c.name },
-          ]}
-        />
-        <span class="fingerprint" title="Current chat definition fingerprint">
-          {currentFingerprint}
-        </span>
-        <div class="spacer" />
-        <button class="primary" onClick={onNewRun}>New run</button>
+      <header class="page-header">
+        <div class="page-header-top">
+          <Breadcrumbs
+            items={[
+              { label: 'Chats', route: { kind: 'list' } },
+              { label: c.name },
+            ]}
+          />
+          <span class="fingerprint" title="Current chat definition fingerprint">
+            {currentFingerprint}
+          </span>
+        </div>
+        <div class="page-header-actions">
+          <div class="spacer" />
+          <button class="primary" onClick={onNewRun}>New run</button>
+        </div>
       </header>
 
       <section class="chat-def">
@@ -168,7 +172,7 @@ export function RunsListScreen() {
             >
               <div class="chat-main">
                 <div class="chat-name">
-                  Run {new Date(r.createdAt).toLocaleString()}
+                  Run · {formatDateTime(r.createdAt)}
                   {' '}
                   <span class="fingerprint" title={drift ? 'Snapshot differs from current chat definition' : 'Matches current chat definition'}>
                     {r.fingerprint}
@@ -178,7 +182,7 @@ export function RunsListScreen() {
                 <div class="chat-meta">
                   {r.messages.length} message{r.messages.length === 1 ? '' : 's'} ·
                   {' '}{r.chatSnapshot.agents.length} agent{r.chatSnapshot.agents.length === 1 ? '' : 's'} ·
-                  {' '}updated {new Date(r.updatedAt).toLocaleString()}
+                  {' '}updated {formatDateTime(r.updatedAt)}
                 </div>
               </div>
               <span class="chat-row-arrow" aria-hidden="true">

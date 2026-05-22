@@ -1,5 +1,6 @@
 import { chats, runs, createChat, signOut, pendingExpandDefFor } from '../state/signals';
 import { navigate } from '../router';
+import { formatDateTime } from './widgets';
 
 export function ChatListScreen() {
   function onNew() {
@@ -10,11 +11,15 @@ export function ChatListScreen() {
 
   return (
     <div class="screen list">
-      <header class="topbar">
-        <h2>Chats</h2>
-        <div class="spacer" />
-        <button class="primary" onClick={onNew}>New chat</button>
-        <button class="link" onClick={signOut}>Sign out</button>
+      <header class="page-header">
+        <div class="page-header-top">
+          <h2>Chats</h2>
+        </div>
+        <div class="page-header-actions">
+          <div class="spacer" />
+          <button class="link" onClick={signOut}>Sign out</button>
+          <button class="primary" onClick={onNew}>New chat</button>
+        </div>
       </header>
       <div class="chat-list">
         {chats.value.length === 0 && (
@@ -34,7 +39,7 @@ export function ChatListScreen() {
                 <div class="chat-meta">
                   {c.agents.length} agent{c.agents.length === 1 ? '' : 's'} ·
                   {' '}{runCount} run{runCount === 1 ? '' : 's'} ·
-                  {' '}updated {new Date(c.updatedAt).toLocaleString()}
+                  {' '}updated {formatDateTime(c.updatedAt)}
                 </div>
               </div>
               <span class="chat-row-arrow" aria-hidden="true">

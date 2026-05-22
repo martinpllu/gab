@@ -7,7 +7,7 @@ import {
   deleteRun,
 } from '../state/signals';
 import { runLoop, requestStop } from '../engine/scheduler';
-import { Transcript, ConfirmButton, Breadcrumbs } from './widgets';
+import { Transcript, ConfirmButton, Breadcrumbs, formatDateTime } from './widgets';
 import { fingerprintDefinition } from '../engine/fingerprint';
 import { navigate } from '../router';
 import { MODEL_LABELS } from '../types';
@@ -49,58 +49,58 @@ export function ChatRunScreen() {
     }
   }
 
+  const runLabel = formatRunLabel(r.createdAt);
+
   return (
     <div class="screen run">
-      <header class="topbar">
-        <Breadcrumbs
-          items={[
-            { label: 'Chats', route: { kind: 'list' } },
-            { label: def.name, route: { kind: 'runs', chatId: r.chatId } },
-            { label: `Run ${new Date(r.createdAt).toLocaleString()}` },
-          ]}
-        />
-        <button
-          class="fingerprint"
-          title={drift ? 'Snapshot differs from current chat definition' : 'Chat definition fingerprint'}
-          onClick={() => setSnapshotOpen((v) => !v)}
-        >
-          {r.fingerprint}
-          {drift ? ' *' : ''}
-        </button>
-        <div class="spacer" />
-        <span class="turn-counter">{r.messages.length} messages</span>
-        {runState.value === 'idle' ? (
-          <>
-            <input
-              class="turns-input"
-              type="number"
-              min={1}
-              placeholder="∞"
-              title="Turns to run (one-shot; doesn't change the snapshot)"
-              value={turns}
-              onInput={(e) => setTurns((e.target as HTMLInputElement).value)}
-            />
-            <button class="primary" onClick={onRun} disabled={!canRun}>
-              ▶ Run
-            </button>
-          </>
-        ) : (
-          <button class="danger" onClick={requestStop} disabled={runState.value === 'stopping'}>
-            {runState.value === 'stopping' ? 'Stopping…' : '■ Stop'}
+      <header class="page-header">
+        <div class="page-header-top">
+          <Breadcrumbs
+            items={[
+              { label: 'Chats', route: { kind: 'list' } },
+              { label: def.name, route: { kind: 'runs', chatId: r.chatId } },
+              { label: runLabel, title: new Date(r.createdAt).toISOString() },
+            ]}
+          />
+          <button
+            class="fingerprint"
+            title={drift ? 'Snapshot differs from current chat definition' : 'Chat definition fingerprint'}
+            onClick={() => setSnapshotOpen((v) => !v)}
+          >
+            {r.fingerprint}
+            {drift ? ' *' : ''}
           </button>
-        )}
-        <ConfirmButton
-          label="Clear"
-          confirmLabel="Click again to clear"
-          disabled={runState.value !== 'idle'}
-          onConfirm={() => clearRunMessages(r.id)}
-        />
-        <ConfirmButton
-          label="Delete run"
-          confirmLabel="Click again to delete run"
-          disabled={runState.value !== 'idle'}
-          onConfirm={() => deleteRun(r.id)}
-        />
+        </div>
+        <div class="page-header-actions">
+          <span class="turn-counter">{r.messages.length} messages</span>
+          <div class="spacer" />
+          <ConfirmButton
+            label="Clear"
+            confirmLabel="Click again to clear"
+            disabled={runState.value !== 'idle'}
+            onConfirm={() => clearRunMessages(r.id)}
+          />
+          {runState.value === 'idle' ? (
+            <>
+              <input
+                class="turns-input"
+                type="number"
+                min={1}
+                placeholder="∞"
+                title="Turns to run (one-shot; doesn't change the snapshot)"
+                value={turns}
+                onInput={(e) => setTurns((e.target as HTMLInputElement).value)}
+              />
+              <button class="primary" onClick={onRun} disabled={!canRun}>
+                ▶ Run
+              </button>
+            </>
+          ) : (
+            <button class="danger" onClick={requestStop} disabled={runState.value === 'stopping'}>
+              {runState.value === 'stopping' ? 'Stopping…' : '■ Stop'}
+            </button>
+          )}
+        </div>
       </header>
 
       {snapshotOpen && <SnapshotPanel run={r} />}
@@ -110,8 +110,21 @@ export function ChatRunScreen() {
       )}
       {error && <div class="error">{error}</div>}
       <Transcript messages={r.messages} agents={def.agents} />
+
+      <div class="danger-zone">
+        <ConfirmButton
+          label="Delete run"
+          confirmLabel="Click again to delete run"
+          disabled={runState.value !== 'idle'}
+          onConfirm={() => deleteRun(r.id)}
+        />
+      </div>
     </div>
   );
+}
+
+function formatRunLabel(iso: string): string {
+  return `Run · ${formatDateTime(iso)}`;
 }
 
 function SnapshotPanel(props: { run: Run }) {

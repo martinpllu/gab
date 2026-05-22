@@ -6,6 +6,12 @@ import { navigate } from '../router';
 
 export type Crumb = { label: string; route?: Route; title?: string };
 
+export function formatDateTime(iso: string | number): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function Breadcrumbs(props: { items: Crumb[] }) {
   return (
     <nav class="crumbs" aria-label="Breadcrumb">
@@ -260,9 +266,9 @@ export function Transcript(props: { messages: Message[]; agents: Agent[] }) {
 
   function colorFor(agentId: string): string {
     const i = agents.findIndex((a) => a.id === agentId);
-    const hues = [25, 200, 145, 270, 340, 50];
+    const hues = [150, 210, 35, 280, 340, 95];
     const h = hues[((i % hues.length) + hues.length) % hues.length];
-    return `hsl(${h}, 38%, 96%)`;
+    return `hsl(${h}, 55%, 94%)`;
   }
 
   return (
