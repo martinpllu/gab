@@ -1,11 +1,15 @@
-import type { ChatDefinition } from '../types';
+import type { ChatSpec } from '../types';
 
 function canonicalize(value: unknown): unknown {
+  if (typeof value === 'function') return undefined;
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === 'object') {
     const obj = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
-    for (const k of Object.keys(obj).sort()) out[k] = canonicalize(obj[k]);
+    for (const k of Object.keys(obj).sort()) {
+      const v = canonicalize(obj[k]);
+      if (v !== undefined) out[k] = v;
+    }
     return out;
   }
   return value;
@@ -20,34 +24,22 @@ function fnv1aHex(s: string): string {
   return (h >>> 0).toString(16).padStart(8, '0');
 }
 
-export function fingerprintDefinition(def: ChatDefinition): string {
+/**
+ * Fingerprint the run-affecting parts of a spec: agents, chat, flow.
+ * Excludes `metadata` entirely (title/description/timestamps don't change
+ * what a run does). Function-valued policy/stop fields are dropped by
+ * canonicalize — they're programmatic-only and never UI-authored.
+ */
+export function fingerprintDefinition(spec: ChatSpec): string {
   const normalized = {
-    name: def.name,
-    chatPrompt: def.chatPrompt,
-    defaultModel: def.defaultModel,
-    randomize: def.randomize,
-    turnsRequested: def.turnsRequested,
-    agents: [...def.agents]
-      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
-      .map((a) => ({
-        id: a.id,
-        name: a.name,
-        personaPrompt: a.personaPrompt,
-        model: a.model,
-        afterEach: a.afterEach,
-        order: a.order,
-      })),
+    agents: spec.agents,
+    chat: spec.chat,
+    flow: spec.flow,
   };
   return fnv1aHex(JSON.stringify(canonicalize(normalized)));
 }
 
-export function snapshotDefinition(def: ChatDefinition): ChatDefinition {
-  return {
-    name: def.name,
-    chatPrompt: def.chatPrompt,
-    defaultModel: def.defaultModel,
-    randomize: def.randomize,
-    turnsRequested: def.turnsRequested,
-    agents: def.agents.map((a) => ({ ...a })),
-  };
+/** Deep structural copy of a spec, dropping any function-valued fields. */
+export function snapshotDefinition(spec: ChatSpec): ChatSpec {
+  return structuredClone(spec);
 }

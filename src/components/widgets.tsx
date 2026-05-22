@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { Agent, Model, Message, Chat, Route } from '../types';
+import type { ComponentChildren } from 'preact';
+import type {
+  AgentDefinition,
+  AgentId,
+  Message,
+  MessageScope,
+  DefaultableScope,
+} from '../types';
 import { MODELS, MODEL_LABELS } from '../types';
-import { reorderMainAgents, updateAgent, deleteAgent } from '../state/signals';
+import type { Route } from '../types';
 import { navigate } from '../router';
 
 export type Crumb = { label: string; route?: Route; title?: string };
@@ -86,203 +93,350 @@ export function ConfirmButton(props: {
   );
 }
 
-export function ModelPicker(props: {
-  value: Model;
-  onChange: (m: Model) => void;
-  disabled?: boolean;
+// ───────────────────────────────────────────────────────────────────────────
+// Form primitives shared across the Agents / Chat / Flow authoring views.
+// ───────────────────────────────────────────────────────────────────────────
+
+export function Field(props: {
+  label: string;
+  hint?: string;
+  children: ComponentChildren;
 }) {
   return (
-    <select
-      value={props.value}
-      disabled={props.disabled}
-      onChange={(e) => props.onChange((e.target as HTMLSelectElement).value as Model)}
-    >
-      {MODELS.map((m) => (
-        <option value={m} key={m}>
-          {MODEL_LABELS[m]}
-        </option>
-      ))}
-    </select>
+    <label class="field">
+      <span class="field-label">{props.label}</span>
+      {props.children}
+      {props.hint && <span class="field-hint">{props.hint}</span>}
+    </label>
   );
 }
 
-export function ModelOverridePicker(props: {
-  value: Model | null;
-  onChange: (m: Model | null) => void;
+/** Number input that maps blank → undefined (clears the optional field). */
+export function NumberInput(props: {
+  value: number | undefined;
+  onChange: (v: number | undefined) => void;
+  placeholder?: string;
   disabled?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+}) {
+  return (
+    <input
+      type="number"
+      value={props.value ?? ''}
+      placeholder={props.placeholder}
+      disabled={props.disabled}
+      min={props.min}
+      max={props.max}
+      step={props.step}
+      onInput={(e) => {
+        const raw = (e.target as HTMLInputElement).value;
+        props.onChange(raw === '' ? undefined : Number(raw));
+      }}
+    />
+  );
+}
+
+/** Model picker: known models as suggestions, but any OpenRouter ID is accepted. */
+export function ModelPicker(props: {
+  value: string;
+  onChange: (m: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <>
+      <input
+        class="model-input"
+        list="model-suggestions"
+        value={props.value}
+        disabled={props.disabled}
+        placeholder="openrouter/model-id"
+        onInput={(e) => props.onChange((e.target as HTMLInputElement).value)}
+      />
+      <datalist id="model-suggestions">
+        {MODELS.map((m) => (
+          <option value={m} key={m}>
+            {MODEL_LABELS[m] ?? m}
+          </option>
+        ))}
+      </datalist>
+    </>
+  );
+}
+
+/** Single-agent dropdown. Stores AgentId; shows display names. */
+export function AgentSelect(props: {
+  agents: AgentDefinition[];
+  value: AgentId | null;
+  onChange: (id: AgentId) => void;
+  disabled?: boolean;
+  placeholder?: string;
 }) {
   return (
     <select
       value={props.value ?? ''}
       disabled={props.disabled}
-      onChange={(e) => {
-        const v = (e.target as HTMLSelectElement).value;
-        props.onChange(v === '' ? null : (v as Model));
-      }}
+      onChange={(e) => props.onChange((e.target as HTMLSelectElement).value as AgentId)}
     >
-      <option value="">use default</option>
-      {MODELS.map((m) => (
-        <option value={m} key={m}>
-          {MODEL_LABELS[m]}
+      <option value="" disabled>
+        {props.placeholder ?? 'Select an agent…'}
+      </option>
+      {props.agents.map((a) => (
+        <option value={a.id} key={a.id}>
+          {a.name || '(unnamed)'}
         </option>
       ))}
     </select>
   );
 }
 
-export function AgentEditor(props: {
-  chatId: string;
-  agent: Agent;
-  disabled: boolean;
+/**
+ * Multi-select of agents as a row of toggle chips. Order is not significant
+ * (used for participants and random pools). For ordered lists use OrderedAgentList.
+ */
+export function AgentChips(props: {
+  agents: AgentDefinition[];
+  selected: AgentId[];
+  onChange: (ids: AgentId[]) => void;
+  disabled?: boolean;
 }) {
-  const { chatId, agent, disabled } = props;
+  const set = new Set(props.selected);
+  function toggle(id: AgentId) {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    // Preserve agent declaration order for stability.
+    props.onChange(props.agents.filter((a) => next.has(a.id)).map((a) => a.id));
+  }
+  if (props.agents.length === 0) {
+    return <span class="field-hint">No agents defined yet.</span>;
+  }
   return (
-    <div class="agent-card">
-      <div class="row">
-        <input
-          class="agent-name"
-          type="text"
-          value={agent.name}
-          disabled={disabled}
-          onInput={(e) =>
-            updateAgent(chatId, agent.id, {
-              name: (e.target as HTMLInputElement).value,
-            })
-          }
-        />
-        <label class="checkbox">
-          <input
-            type="checkbox"
-            checked={agent.afterEach}
-            disabled={disabled}
-            onChange={(e) =>
-              updateAgent(chatId, agent.id, {
-                afterEach: (e.target as HTMLInputElement).checked,
-              })
-            }
-          />
-          after each
-        </label>
-        <ModelOverridePicker
-          value={agent.model}
-          disabled={disabled}
-          onChange={(m) => updateAgent(chatId, agent.id, { model: m })}
-        />
-        <button
-          class="danger"
-          disabled={disabled}
-          onClick={() => deleteAgent(chatId, agent.id)}
-        >
-          delete
-        </button>
-      </div>
-      <textarea
-        class="persona"
-        placeholder="Persona prompt — describe how this agent should behave."
-        value={agent.personaPrompt}
-        disabled={disabled}
-        onInput={(e) =>
-          updateAgent(chatId, agent.id, {
-            personaPrompt: (e.target as HTMLTextAreaElement).value,
-          })
-        }
-        rows={3}
-      />
+    <div class="chip-row">
+      {props.agents.map((a) => {
+        const on = set.has(a.id);
+        return (
+          <button
+            type="button"
+            key={a.id}
+            class={`chip ${on ? 'chip-on' : ''}`}
+            disabled={props.disabled}
+            onClick={() => toggle(a.id)}
+          >
+            {a.name || '(unnamed)'}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-export function TurnOrderList(props: { chat: Chat; disabled: boolean }) {
-  const { chat, disabled } = props;
-  const mainAgents = chat.agents
-    .filter((a) => !a.afterEach)
-    .sort((a, b) => a.order - b.order);
-  const afterAgents = chat.agents.filter((a) => a.afterEach);
-  const [dragId, setDragId] = useState<string | null>(null);
-
-  function onDrop(targetId: string) {
-    if (!dragId || dragId === targetId) return;
-    const ids = mainAgents.map((a) => a.id);
-    const from = ids.indexOf(dragId);
-    const to = ids.indexOf(targetId);
-    if (from < 0 || to < 0) return;
-    const next = ids.slice();
-    next.splice(from, 1);
-    next.splice(to, 0, dragId);
-    reorderMainAgents(chat.id, next);
-    setDragId(null);
+/**
+ * Ordered list of agents (used for round-robin order and interleave rotation).
+ * Each row picks an agent; rows can be reordered and removed. Agents may repeat
+ * (e.g. negotiation's [A, buyer, B, buyer]).
+ */
+export function OrderedAgentList(props: {
+  agents: AgentDefinition[];
+  value: AgentId[];
+  onChange: (ids: AgentId[]) => void;
+  disabled?: boolean;
+  addLabel?: string;
+}) {
+  const { value, agents, disabled } = props;
+  function setAt(i: number, id: AgentId) {
+    props.onChange(value.map((v, j) => (j === i ? id : v)));
   }
-
+  function removeAt(i: number) {
+    props.onChange(value.filter((_, j) => j !== i));
+  }
+  function move(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= value.length) return;
+    const next = value.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    props.onChange(next);
+  }
+  function add() {
+    const first = agents[0]?.id;
+    if (first) props.onChange([...value, first]);
+  }
   return (
-    <div class="turn-order">
-      <div class="section-label">
-        Main order {chat.randomize ? '(randomized per cycle)' : '(drag to reorder)'}
-      </div>
-      <ul class="order-list">
-        {mainAgents.map((a) => (
-          <li
-            key={a.id}
-            class={'order-item' + (dragId === a.id ? ' dragging' : '')}
-            draggable={!disabled}
-            onDragStart={() => setDragId(a.id)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => onDrop(a.id)}
-            onDragEnd={() => setDragId(null)}
-          >
-            <span class="handle">≡</span>
-            <AgentEditor chatId={chat.id} agent={a} disabled={disabled} />
-          </li>
-        ))}
-        {mainAgents.length === 0 && (
-          <li class="hint">No main agents yet. Click "Add agent" below.</li>
-        )}
-      </ul>
+    <div class="ordered-list">
+      {value.length === 0 && <span class="field-hint">Empty — defaults to all participants.</span>}
+      {value.map((id, i) => (
+        <div class="ordered-row" key={i}>
+          <span class="ordered-index">{i + 1}</span>
+          <AgentSelect
+            agents={agents}
+            value={id}
+            disabled={disabled}
+            onChange={(v) => setAt(i, v)}
+          />
+          <div class="ordered-controls">
+            <button type="button" disabled={disabled || i === 0} onClick={() => move(i, -1)} title="Move up">↑</button>
+            <button type="button" disabled={disabled || i === value.length - 1} onClick={() => move(i, 1)} title="Move down">↓</button>
+            <button type="button" class="danger" disabled={disabled} onClick={() => removeAt(i)} title="Remove">✕</button>
+          </div>
+        </div>
+      ))}
+      <button type="button" class="add-row" disabled={disabled || agents.length === 0} onClick={add}>
+        + {props.addLabel ?? 'Add'}
+      </button>
+    </div>
+  );
+}
 
-      {afterAgents.length > 0 && (
-        <>
-          <div class="section-label">After each turn</div>
-          <ul class="order-list">
-            {afterAgents.map((a) => (
-              <li key={a.id} class="order-item after-each">
-                <span class="handle">↺</span>
-                <AgentEditor chatId={chat.id} agent={a} disabled={disabled} />
-              </li>
-            ))}
-          </ul>
-        </>
+/** Editor for a DefaultableScope (self | broadcast). Used at the chat level. */
+export function DefaultableScopeField(props: {
+  value: DefaultableScope | undefined;
+  onChange: (s: DefaultableScope) => void;
+  disabled?: boolean;
+}) {
+  const type = props.value?.type ?? 'broadcast';
+  return (
+    <select
+      value={type}
+      disabled={props.disabled}
+      onChange={(e) => {
+        const t = (e.target as HTMLSelectElement).value as DefaultableScope['type'];
+        props.onChange({ type: t });
+      }}
+    >
+      <option value="broadcast">Broadcast — visible to everyone</option>
+      <option value="self">Self — private scratchpad</option>
+    </select>
+  );
+}
+
+/**
+ * Editor for a full MessageScope (self | direct | multicast | broadcast).
+ * Used by phase-step scope overrides.
+ */
+export function ScopeField(props: {
+  agents: AgentDefinition[];
+  value: MessageScope;
+  onChange: (s: MessageScope) => void;
+  disabled?: boolean;
+}) {
+  const { agents, value, disabled } = props;
+  function changeType(t: MessageScope['type']) {
+    switch (t) {
+      case 'self': props.onChange({ type: 'self' }); break;
+      case 'broadcast': props.onChange({ type: 'broadcast' }); break;
+      case 'direct': props.onChange({ type: 'direct', to: agents[0]?.id ?? ('' as AgentId) }); break;
+      case 'multicast': props.onChange({ type: 'multicast', to: [] }); break;
+    }
+  }
+  return (
+    <div class="scope-field">
+      <select
+        value={value.type}
+        disabled={disabled}
+        onChange={(e) => changeType((e.target as HTMLSelectElement).value as MessageScope['type'])}
+      >
+        <option value="broadcast">Broadcast</option>
+        <option value="direct">Direct</option>
+        <option value="multicast">Multicast</option>
+        <option value="self">Self</option>
+      </select>
+      {value.type === 'direct' && (
+        <AgentSelect
+          agents={agents}
+          value={value.to}
+          disabled={disabled}
+          onChange={(id) => props.onChange({ type: 'direct', to: id })}
+        />
+      )}
+      {value.type === 'multicast' && (
+        <AgentChips
+          agents={agents}
+          selected={value.to}
+          disabled={disabled}
+          onChange={(ids) => props.onChange({ type: 'multicast', to: ids })}
+        />
       )}
     </div>
   );
 }
 
-export function Transcript(props: { messages: Message[]; agents: Agent[] }) {
+// ───────────────────────────────────────────────────────────────────────────
+// Transcript — scope-aware run view. Re-exported; see Transcript.tsx logic below.
+// ───────────────────────────────────────────────────────────────────────────
+
+const HUES = [150, 210, 35, 280, 340, 95, 18, 255];
+
+function senderName(m: Message): string {
+  if (m.from === 'user') return 'User';
+  if (m.from === 'seed') return 'Seed';
+  if (m.from === 'system') return 'System';
+  return m.fromNameSnapshot ?? m.from;
+}
+
+function scopeDescriptor(m: Message): { label: string; kind: 'broadcast' | 'self' | 'private' } {
+  switch (m.scope.type) {
+    case 'broadcast':
+      return { label: 'to everyone', kind: 'broadcast' };
+    case 'self':
+      return { label: 'private note', kind: 'self' };
+    case 'direct':
+      return { label: `→ ${m.toNamesSnapshot?.[0] ?? 'someone'}`, kind: 'private' };
+    case 'multicast':
+      return { label: `→ ${(m.toNamesSnapshot ?? []).join(', ') || 'group'}`, kind: 'private' };
+  }
+}
+
+export function Transcript(props: { messages: Message[]; agents: AgentDefinition[] }) {
   const { messages, agents } = props;
   const ref = useRef<HTMLDivElement>(null);
-  const byId = new Map(agents.map((a) => [a.id, a] as const));
 
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
   }, [messages.length]);
 
-  function colorFor(agentId: string): string {
-    const i = agents.findIndex((a) => a.id === agentId);
-    const hues = [150, 210, 35, 280, 340, 95];
-    const h = hues[((i % hues.length) + hues.length) % hues.length];
-    return `hsl(${h}, 55%, 94%)`;
+  function hueFor(from: Message['from']): number | null {
+    const i = agents.findIndex((a) => a.id === (from as AgentId));
+    if (i < 0) return null;
+    return HUES[i % HUES.length];
   }
 
   return (
     <div class="transcript" ref={ref}>
-      {messages.length === 0 && (
-        <div class="hint">No messages yet. Click Run to start.</div>
-      )}
-      {messages.map((m: Message) => {
-        const a = byId.get(m.agentId);
+      {messages.length === 0 && <div class="hint">No messages yet. Hit Run to start.</div>}
+      {messages.map((m) => {
+        const sys = m.from === 'system';
+        const synthetic = m.from === 'user' || m.from === 'seed';
+        const { label, kind } = scopeDescriptor(m);
+        const hue = hueFor(m.from);
+
+        if (sys) {
+          return (
+            <div class="sys-line" key={m.id}>
+              <span class="sys-badge">system</span>
+              <span class="sys-text">{m.content}</span>
+            </div>
+          );
+        }
+
+        const classes = [
+          'bubble',
+          kind === 'self' ? 'bubble-self' : '',
+          kind === 'private' ? 'bubble-private' : '',
+          synthetic ? 'bubble-synthetic' : '',
+        ].filter(Boolean).join(' ');
+
         return (
-          <div class="bubble" key={m.id} style={{ background: colorFor(m.agentId) }}>
+          <div
+            class={classes}
+            key={m.id}
+            style={hue != null ? { '--accent-hue': String(hue) } : undefined}
+          >
             <div class="bubble-meta">
-              <strong>{a?.name ?? m.agentNameSnapshot}</strong>
-              <span class="model-label">{MODEL_LABELS[m.model] ?? m.model}</span>
+              {hue != null && <span class="sender-dot" style={{ background: `hsl(${hue}, 52%, 58%)` }} />}
+              <strong>{senderName(m)}</strong>
+              <span class={`scope-tag scope-${kind}`}>{label}</span>
+              {m.model && <span class="model-label">{MODEL_LABELS[m.model] ?? m.model}</span>}
             </div>
             <div class="bubble-content">{m.content}</div>
           </div>

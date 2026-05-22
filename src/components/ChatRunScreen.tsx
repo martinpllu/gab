@@ -6,7 +6,7 @@ import {
   clearRunMessages,
   deleteRun,
 } from '../state/signals';
-import { runLoop, requestStop } from '../engine/scheduler';
+import { startRun, requestStop } from '../engine/run-controller';
 import { Transcript, ConfirmButton, Breadcrumbs, formatDateTime } from './widgets';
 import { fingerprintDefinition } from '../engine/fingerprint';
 import { navigate } from '../router';
@@ -16,40 +16,37 @@ import type { Run } from '../types';
 export function ChatRunScreen() {
   const r = currentRun.value;
   const c = currentChat.value;
-  const [error, setError] = useState<string | null>(null);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
-  const [turns, setTurns] = useState<string>(
-    r?.chatSnapshot.turnsRequested != null
-      ? String(r.chatSnapshot.turnsRequested)
-      : '',
-  );
+  const [error, setError] = useState<string | null>(null);
   if (!r) {
     if (c) navigate({ kind: 'runs', chatId: c.id }, { replace: true });
     else navigate({ kind: 'list' }, { replace: true });
     return null;
   }
-  const def = r.chatSnapshot;
-  const parsedTurns = turns === '' ? null : Number(turns);
-  const turnsValid =
-    parsedTurns === null || (Number.isFinite(parsedTurns) && parsedTurns >= 1);
-  const canRun =
-    runState.value === 'idle' &&
-    def.agents.filter((a) => !a.afterEach).length > 0 &&
-    turnsValid;
+  const spec = r.specSnapshot;
+  const needsUserKickoff = spec.chat.kickoff.type === 'user';
 
-  const liveFingerprint = c ? fingerprintDefinition(c) : null;
+  const liveFingerprint = c ? fingerprintDefinition(c.spec) : null;
   const drift = liveFingerprint != null && liveFingerprint !== r.fingerprint;
+
+  const runLabel = `Run · ${formatDateTime(r.createdAt)}`;
+  const canRun =
+    runState.value === 'idle' && spec.chat.participants.length > 0;
 
   async function onRun() {
     setError(null);
+    let initialUserMessage: string | undefined;
+    if (needsUserKickoff) {
+      const entered = window.prompt('This chat opens with a user message. What should it say?');
+      if (entered == null) return;
+      initialUserMessage = entered;
+    }
     try {
-      await runLoop(r!.id, parsedTurns);
+      await startRun(r!, { initialUserMessage });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   }
-
-  const runLabel = formatRunLabel(r.createdAt);
 
   return (
     <div class="screen run">
@@ -58,7 +55,7 @@ export function ChatRunScreen() {
           <Breadcrumbs
             items={[
               { label: 'Chats', route: { kind: 'list' } },
-              { label: def.name, route: { kind: 'runs', chatId: r.chatId } },
+              { label: spec.metadata.title, route: { kind: 'runs', chatId: r.chatId } },
               { label: runLabel, title: new Date(r.createdAt).toISOString() },
             ]}
           />
@@ -81,22 +78,15 @@ export function ChatRunScreen() {
             onConfirm={() => clearRunMessages(r.id)}
           />
           {runState.value === 'idle' ? (
-            <>
-              <input
-                class="turns-input"
-                type="number"
-                min={1}
-                placeholder="∞"
-                title="Turns to run (one-shot; doesn't change the snapshot)"
-                value={turns}
-                onInput={(e) => setTurns((e.target as HTMLInputElement).value)}
-              />
-              <button class="primary" onClick={onRun} disabled={!canRun}>
-                ▶ Run
-              </button>
-            </>
+            <button class="primary" onClick={onRun} disabled={!canRun}>
+              ▶ Run
+            </button>
           ) : (
-            <button class="danger" onClick={requestStop} disabled={runState.value === 'stopping'}>
+            <button
+              class="danger"
+              onClick={requestStop}
+              disabled={runState.value === 'stopping'}
+            >
               {runState.value === 'stopping' ? 'Stopping…' : '■ Stop'}
             </button>
           )}
@@ -104,12 +94,10 @@ export function ChatRunScreen() {
       </header>
 
       {snapshotOpen && <SnapshotPanel run={r} />}
-
-      {!canRun && runState.value === 'idle' && def.agents.filter((a) => !a.afterEach).length === 0 && (
-        <div class="hint">This snapshot has no main-order agents.</div>
-      )}
       {error && <div class="error">{error}</div>}
-      <Transcript messages={r.messages} agents={def.agents} />
+      {r.reason && <div class="hint">Stopped: {r.reason}</div>}
+
+      <Transcript messages={r.messages} agents={spec.agents} />
 
       <div class="danger-zone">
         <ConfirmButton
@@ -123,42 +111,34 @@ export function ChatRunScreen() {
   );
 }
 
-function formatRunLabel(iso: string): string {
-  return `Run · ${formatDateTime(iso)}`;
-}
-
 function SnapshotPanel(props: { run: Run }) {
   const r = props.run;
-  const def = r.chatSnapshot;
+  const spec = r.specSnapshot;
   return (
     <div class="snapshot-panel">
       <div class="snapshot-row">
         <strong>Fingerprint:</strong> <code>{r.fingerprint}</code>
       </div>
       <div class="snapshot-row">
-        <strong>Default model:</strong> {MODEL_LABELS[def.defaultModel] ?? def.defaultModel}
+        <strong>Policy:</strong> {spec.flow.main.policy.type}
       </div>
       <div class="snapshot-row">
-        <strong>Turns requested:</strong> {def.turnsRequested ?? '∞'}
+        <strong>Kickoff:</strong> {spec.chat.kickoff.type}
       </div>
-      <div class="snapshot-row">
-        <strong>Randomize order:</strong> {def.randomize ? 'yes' : 'no'}
-      </div>
-      {def.chatPrompt && (
+      {spec.chat.sharedPrompt && (
         <div class="snapshot-row">
-          <strong>Chat prompt:</strong>
-          <pre class="snapshot-prompt">{def.chatPrompt}</pre>
+          <strong>Shared prompt:</strong>
+          <pre class="snapshot-prompt">{spec.chat.sharedPrompt}</pre>
         </div>
       )}
       <div class="snapshot-row">
         <strong>Agents:</strong>
         <ul class="snapshot-agents">
-          {def.agents.map((a) => (
+          {spec.agents.map((a) => (
             <li key={a.id}>
               <strong>{a.name}</strong>
-              {a.afterEach ? ' (after each)' : ` (order ${a.order})`}
-              {a.model ? ` · ${MODEL_LABELS[a.model] ?? a.model}` : ''}
-              {a.personaPrompt && <pre class="snapshot-prompt">{a.personaPrompt}</pre>}
+              {` · ${MODEL_LABELS[a.model] ?? a.model}`}
+              {a.systemPrompt && <pre class="snapshot-prompt">{a.systemPrompt}</pre>}
             </li>
           ))}
         </ul>

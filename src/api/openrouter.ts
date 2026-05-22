@@ -1,4 +1,4 @@
-import type { ChatMessage, Model } from '../types';
+import type { ChatMessage, CompletionParams } from '../types';
 import { openRouterKey } from '../state/signals';
 
 const URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -14,15 +14,30 @@ export class OpenRouterError extends Error {
 }
 
 export interface ChatCompletionArgs {
-  model: Model;
+  model: string;
   messages: ChatMessage[];
   user: string;
+  params?: CompletionParams;
   signal?: AbortSignal;
 }
 
-export async function chatCompletion(args: ChatCompletionArgs): Promise<string> {
+export interface ChatCompletionResult {
+  /** Assistant text content. */
+  content: string;
+}
+
+export async function chatCompletion(args: ChatCompletionArgs): Promise<ChatCompletionResult> {
   const key = openRouterKey.value;
   if (!key) throw new Error('Not authenticated');
+
+  const body: Record<string, unknown> = {
+    model: args.model,
+    messages: args.messages,
+    user: args.user,
+    stream: false,
+    ...(args.params ?? {}),
+  };
+
   const res = await fetch(URL, {
     method: 'POST',
     headers: {
@@ -31,12 +46,7 @@ export async function chatCompletion(args: ChatCompletionArgs): Promise<string> 
       'HTTP-Referer': window.location.origin,
       'X-Title': 'Gab',
     },
-    body: JSON.stringify({
-      model: args.model,
-      messages: args.messages,
-      user: args.user,
-      stream: false,
-    }),
+    body: JSON.stringify(body),
     signal: args.signal,
   });
   if (!res.ok) {
@@ -44,9 +54,11 @@ export async function chatCompletion(args: ChatCompletionArgs): Promise<string> 
     throw new OpenRouterError(res.status, text);
   }
   const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
+    choices?: { message?: { content?: string | null } }[];
   };
-  const content = data.choices?.[0]?.message?.content;
-  if (typeof content !== 'string') throw new Error('OpenRouter response missing content');
-  return content;
+  const message = data.choices?.[0]?.message;
+  if (!message) throw new Error('OpenRouter response missing message');
+  return {
+    content: typeof message.content === 'string' ? message.content : '',
+  };
 }

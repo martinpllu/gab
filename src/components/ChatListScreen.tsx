@@ -1,11 +1,29 @@
-import { chats, runs, createChat, signOut, pendingExpandDefFor } from '../state/signals';
+import { useState } from 'preact/hooks';
+import { chats, runs, createChat, createChatFromSpec, signOut, pendingExpandDefFor } from '../state/signals';
 import { navigate } from '../router';
 import { formatDateTime } from './widgets';
+import type { ChatSpec } from '../types';
+import { roundRobin, interleaved, agentSelected, negotiation } from '../spec/examples';
+
+const EXAMPLES: { spec: ChatSpec; blurb: string }[] = [
+  { spec: roundRobin, blurb: 'Three contributors take turns broadcasting to all.' },
+  { spec: interleaved, blurb: 'A moderator alternates turns with three debaters.' },
+  { spec: agentSelected, blurb: 'A coordinator picks the next expert each turn.' },
+  { spec: negotiation, blurb: 'Private channels, scratchpads, and an omnipotent observer.' },
+];
 
 export function ChatListScreen() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   function onNew() {
     const c = createChat();
     pendingExpandDefFor.value = c.id;
+    navigate({ kind: 'runs', chatId: c.id });
+  }
+
+  function onLoadExample(spec: ChatSpec) {
+    const c = createChatFromSpec(spec);
+    setMenuOpen(false);
     navigate({ kind: 'runs', chatId: c.id });
   }
 
@@ -18,12 +36,35 @@ export function ChatListScreen() {
         <div class="page-header-actions">
           <div class="spacer" />
           <button class="link" onClick={signOut}>Sign out</button>
+          <div class="menu-wrap">
+            <button onClick={() => setMenuOpen((v) => !v)} aria-expanded={menuOpen}>
+              Load example ▾
+            </button>
+            {menuOpen && (
+              <>
+                <div class="menu-backdrop" onClick={() => setMenuOpen(false)} />
+                <div class="menu">
+                  {EXAMPLES.map(({ spec, blurb }) => (
+                    <button
+                      type="button"
+                      class="menu-item"
+                      key={spec.metadata.id}
+                      onClick={() => onLoadExample(spec)}
+                    >
+                      <span class="menu-item-title">{spec.metadata.title}</span>
+                      <span class="menu-item-blurb">{blurb}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button class="primary" onClick={onNew}>New chat</button>
         </div>
       </header>
       <div class="chat-list">
         {chats.value.length === 0 && (
-          <div class="hint">No chats yet. Click "New chat" to make one.</div>
+          <div class="hint">No chats yet. Make one, or load an example to see the engine run.</div>
         )}
         {chats.value.map((c) => {
           const runCount = runs.value.filter((r) => r.chatId === c.id).length;
@@ -35,9 +76,9 @@ export function ChatListScreen() {
               onClick={() => navigate({ kind: 'runs', chatId: c.id })}
             >
               <div class="chat-main">
-                <div class="chat-name">{c.name}</div>
+                <div class="chat-name">{c.spec.metadata.title}</div>
                 <div class="chat-meta">
-                  {c.agents.length} agent{c.agents.length === 1 ? '' : 's'} ·
+                  {c.spec.agents.length} agent{c.spec.agents.length === 1 ? '' : 's'} ·
                   {' '}{runCount} run{runCount === 1 ? '' : 's'} ·
                   {' '}updated {formatDateTime(c.updatedAt)}
                 </div>
