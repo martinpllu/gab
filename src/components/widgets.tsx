@@ -387,13 +387,17 @@ function scopeDescriptor(m: Message): { label: string; kind: 'broadcast' | 'self
   }
 }
 
-export function Transcript(props: { messages: Message[]; agents: AgentDefinition[] }) {
-  const { messages, agents } = props;
+export function Transcript(props: {
+  messages: Message[];
+  agents: AgentDefinition[];
+  activeAgent?: string | null;
+}) {
+  const { messages, agents, activeAgent } = props;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
-  }, [messages.length]);
+  }, [messages.length, activeAgent]);
 
   function hueFor(from: Message['from']): number | null {
     const i = agents.findIndex((a) => a.id === (from as AgentId));
@@ -401,9 +405,17 @@ export function Transcript(props: { messages: Message[]; agents: AgentDefinition
     return HUES[i % HUES.length];
   }
 
+  function hueForName(name: string): number | null {
+    const i = agents.findIndex((a) => a.name === name);
+    if (i < 0) return null;
+    return HUES[i % HUES.length];
+  }
+
   return (
     <div class="transcript" ref={ref}>
-      {messages.length === 0 && <div class="hint">No messages yet. Hit Run to start.</div>}
+      {messages.length === 0 && !activeAgent && (
+        <div class="hint">No messages yet. Hit Run to start.</div>
+      )}
       {messages.map((m) => {
         const sys = m.from === 'system';
         const synthetic = m.from === 'user' || m.from === 'seed';
@@ -442,6 +454,25 @@ export function Transcript(props: { messages: Message[]; agents: AgentDefinition
           </div>
         );
       })}
+      {activeAgent && <ThinkingRow name={activeAgent} hue={hueForName(activeAgent)} />}
+    </div>
+  );
+}
+
+/** Inline "agent is thinking…" indicator shown at the foot of the transcript. */
+function ThinkingRow(props: { name: string; hue: number | null }) {
+  const { name, hue } = props;
+  const color = hue != null ? `hsl(${hue}, 52%, 58%)` : 'var(--muted)';
+  return (
+    <div class="thinking" aria-live="polite">
+      <span class="thinking-dots" style={{ color }}>
+        <span class="thinking-dot" />
+        <span class="thinking-dot" />
+        <span class="thinking-dot" />
+      </span>
+      <span class="thinking-text">
+        <strong style={{ color }}>{name}</strong> is thinking…
+      </span>
     </div>
   );
 }

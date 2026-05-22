@@ -70,6 +70,8 @@ export const openRouterVia = signal<'oauth' | 'manual' | null>(
 export const chats = signal<Chat[]>(loadJSON<Chat[]>(K.chats, []));
 export const runs = signal<Run[]>(loadJSON<Run[]>(K.runs, []));
 export const runState = signal<RunState>('idle');
+/** Name of the agent whose completion is currently being awaited, or null. */
+export const activeAgent = signal<string | null>(null);
 export const route = signal<Route>(parseHash(location.hash));
 
 // UI-only convenience: pre-fill the model for newly added agents (decision Q1).

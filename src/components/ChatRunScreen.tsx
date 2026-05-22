@@ -3,10 +3,11 @@ import {
   currentRun,
   currentChat,
   runState,
+  activeAgent,
   clearRunMessages,
   deleteRun,
 } from '../state/signals';
-import { startRun, requestStop } from '../engine/run-controller';
+import { startRun, continueRun, requestStop } from '../engine/run-controller';
 import { Transcript, ConfirmButton, Breadcrumbs, formatDateTime } from './widgets';
 import { fingerprintDefinition } from '../engine/fingerprint';
 import { navigate } from '../router';
@@ -30,8 +31,9 @@ export function ChatRunScreen() {
   const drift = liveFingerprint != null && liveFingerprint !== r.fingerprint;
 
   const runLabel = `Run · ${formatDateTime(r.createdAt)}`;
-  const canRun =
-    runState.value === 'idle' && spec.chat.participants.length > 0;
+  const idle = runState.value === 'idle';
+  const canRun = idle && spec.chat.participants.length > 0;
+  const canContinue = canRun && r.messages.length > 0;
 
   async function onRun() {
     setError(null);
@@ -43,6 +45,15 @@ export function ChatRunScreen() {
     }
     try {
       await startRun(r!, { initialUserMessage });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function onContinue() {
+    setError(null);
+    try {
+      await continueRun(r!);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -78,9 +89,23 @@ export function ChatRunScreen() {
             onConfirm={() => clearRunMessages(r.id)}
           />
           {runState.value === 'idle' ? (
-            <button class="primary" onClick={onRun} disabled={!canRun}>
-              ▶ Run
-            </button>
+            <>
+              <button
+                class="secondary"
+                onClick={onContinue}
+                disabled={!canContinue}
+                title={
+                  canContinue
+                    ? 'Resume this run from where it stopped'
+                    : 'Nothing to continue yet — start a run first'
+                }
+              >
+                ⊕ Continue
+              </button>
+              <button class="primary" onClick={onRun} disabled={!canRun}>
+                ▶ Run
+              </button>
+            </>
           ) : (
             <button
               class="danger"
@@ -97,7 +122,7 @@ export function ChatRunScreen() {
       {error && <div class="error">{error}</div>}
       {r.reason && <div class="hint">Stopped: {r.reason}</div>}
 
-      <Transcript messages={r.messages} agents={spec.agents} />
+      <Transcript messages={r.messages} agents={spec.agents} activeAgent={activeAgent.value} />
 
       <div class="danger-zone">
         <ConfirmButton

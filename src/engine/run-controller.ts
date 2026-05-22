@@ -1,6 +1,12 @@
 import type { ChatSpec, Run, StopCondition } from "../types";
 import { ChatRunner } from "./runtime";
-import { addMessageToRun, runState, setRunReason, clearRunMessages } from "../state/signals";
+import {
+  activeAgent,
+  addMessageToRun,
+  runState,
+  setRunReason,
+  clearRunMessages,
+} from "../state/signals";
 
 const SOFT_TURN_CAP = 50;
 
@@ -62,6 +68,8 @@ export async function startRun(run: Run, opts: StartRunOptions = {}): Promise<vo
       initialUserMessage: opts.initialUserMessage,
       onMessage: (m) => addMessageToRun(run.id, m),
       shouldStop: () => runState.value === "stopping",
+      onAgentStart: (a) => (activeAgent.value = a.name),
+      onAgentEnd: () => (activeAgent.value = null),
     });
     const result = await runner.run();
     setRunReason(run.id, result.reason);
@@ -69,6 +77,38 @@ export async function startRun(run: Run, opts: StartRunOptions = {}): Promise<vo
     setRunReason(run.id, "error");
     throw e;
   } finally {
+    activeAgent.value = null;
+    runState.value = "idle";
+  }
+}
+
+/**
+ * Resume a previously-stopped run from its existing messages. Skips kickoff and
+ * the opening phase, re-entering the main loop with the prior transcript in
+ * place. Unlike startRun, it does not clear the run first.
+ */
+export async function continueRun(run: Run): Promise<void> {
+  if (runState.value !== "idle") return;
+  if (run.messages.length === 0) return;
+  runState.value = "running";
+
+  const spec = withSoftCap(run.specSnapshot);
+
+  try {
+    const runner = new ChatRunner(spec, {
+      resumeFrom: run.messages,
+      onMessage: (m) => addMessageToRun(run.id, m),
+      shouldStop: () => runState.value === "stopping",
+      onAgentStart: (a) => (activeAgent.value = a.name),
+      onAgentEnd: () => (activeAgent.value = null),
+    });
+    const result = await runner.run();
+    setRunReason(run.id, result.reason);
+  } catch (e) {
+    setRunReason(run.id, "error");
+    throw e;
+  } finally {
+    activeAgent.value = null;
     runState.value = "idle";
   }
 }

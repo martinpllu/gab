@@ -1,5 +1,6 @@
 import type {
   AgentDefinition,
+  AgentId,
   ChatMessage,
   ChatSpec,
   CompletionParams,
@@ -22,6 +23,15 @@ export interface RuntimeOptions {
   onMessage?: (m: Message) => void;
   /** Cooperative cancellation — checked before each main-loop turn. */
   shouldStop?: () => boolean;
+  /** Called when an agent's completion starts/ends. Drives the "thinking" UI. */
+  onAgentStart?: (agent: AgentDefinition) => void;
+  onAgentEnd?: (agent: AgentDefinition) => void;
+  /**
+   * Existing messages to resume from. When provided, the runner skips kickoff
+   * and the opening phase and re-enters the main loop with this history in
+   * place — used to continue (extend) a stopped run.
+   */
+  resumeFrom?: Message[];
 }
 
 export interface RunResult {
@@ -43,14 +53,21 @@ export class ChatRunner {
   constructor(spec: ChatSpec, opts: RuntimeOptions = {}) {
     this.spec = spec;
     this.opts = opts;
+    // Resuming: preload prior history (without re-emitting via onMessage) and
+    // skip kickoff/opening so we re-enter the main loop where we left off.
+    if (opts.resumeFrom?.length) this.log.push(...opts.resumeFrom);
   }
 
   async run(): Promise<RunResult> {
-    await this.kickoff();
+    const resuming = (this.opts.resumeFrom?.length ?? 0) > 0;
 
-    if (this.spec.flow.opening) {
-      for (const step of this.spec.flow.opening) {
-        await this.runPhaseStep(step);
+    if (!resuming) {
+      await this.kickoff();
+
+      if (this.spec.flow.opening) {
+        for (const step of this.spec.flow.opening) {
+          await this.runPhaseStep(step);
+        }
       }
     }
 
@@ -122,6 +139,10 @@ export class ChatRunner {
     const participants = this.spec.chat.participants;
     if (participants.length === 0) return "no-participants";
 
+    // When resuming, advance the rotation past whoever spoke last so the
+    // round-robin/interleave continues from the right place rather than the top.
+    if (this.opts.resumeFrom?.length) this.seedPolicyState(policyState, participants);
+
     const loopStartedAt = Date.now();
     let turnsTaken = 0;
     let roundsCompleted = 0;
@@ -169,6 +190,31 @@ export class ChatRunner {
     }
   }
 
+  /**
+   * Seed policy state from the resumed log so a continued run picks up the
+   * rotation where it left off. We look at the last agent that spoke and set
+   * the round-robin index to the slot *after* it; `lastPick` is set so
+   * `random.avoidRepeat` also behaves.
+   */
+  private seedPolicyState(state: PolicyState, participants: AgentId[]): void {
+    const policy = this.spec.flow.main.policy;
+    const order = policy.type === "round-robin" ? policy.order ?? participants : participants;
+
+    let lastAgent: AgentId | null = null;
+    for (let i = this.log.length - 1; i >= 0; i--) {
+      const from = this.log[i].from;
+      if (participants.includes(from as AgentId)) {
+        lastAgent = from as AgentId;
+        break;
+      }
+    }
+    if (!lastAgent) return;
+
+    state.lastPick = lastAgent;
+    const idx = order.indexOf(lastAgent);
+    if (idx >= 0) state.roundRobinIdx = idx + 1;
+  }
+
   // -------------------------------------------------------------------------
   // A single agent turn
   // -------------------------------------------------------------------------
@@ -179,12 +225,18 @@ export class ChatRunner {
   ): Promise<void> {
     const messages = this.buildChatMessages(agent, opts.promptOverride);
 
-    const result = await chatCompletion({
-      model: agent.model,
-      messages,
-      user: agent.id,
-      params: this.completionParams(agent),
-    });
+    this.opts.onAgentStart?.(agent);
+    let result;
+    try {
+      result = await chatCompletion({
+        model: agent.model,
+        messages,
+        user: agent.id,
+        params: this.completionParams(agent),
+      });
+    } finally {
+      this.opts.onAgentEnd?.(agent);
+    }
 
     const peers = this.spec.agents.filter((a) => a.id !== agent.id);
     const parsed = parseTurn(result.content, agent.id, peers);
@@ -219,12 +271,18 @@ export class ChatRunner {
       "Reply with the display name of the participant who should speak next. " +
         "Reply with the name only, on a single line. Do not use any tools.",
     );
-    const result = await chatCompletion({
-      model: selector.model,
-      messages,
-      user: selector.id,
-      params: this.completionParams(selector),
-    });
+    this.opts.onAgentStart?.(selector);
+    let result;
+    try {
+      result = await chatCompletion({
+        model: selector.model,
+        messages,
+        user: selector.id,
+        params: this.completionParams(selector),
+      });
+    } finally {
+      this.opts.onAgentEnd?.(selector);
+    }
     return result.content.trim();
   }
 
