@@ -57,6 +57,10 @@ export interface Message {
   toNamesSnapshot?: string[];
   /** Model that produced this message (display only). */
   model?: string;
+  /** Cost of the completion that produced this message, in USD. */
+  cost?: number;
+  /** Wall-clock latency of the completion that produced this message, in ms. */
+  latencyMs?: number;
 }
 
 // ---------------------------------------------------------------------------

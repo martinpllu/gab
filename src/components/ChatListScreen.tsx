@@ -2,10 +2,12 @@ import { useState } from 'preact/hooks';
 import { chats, runs, createChat, createChatFromSpec, signOut, pendingExpandDefFor } from '../state/signals';
 import { navigate } from '../router';
 import { formatDateTime } from './widgets';
+import { chatCost, totalCost, formatCost } from '../cost';
 import type { ChatSpec } from '../types';
-import { roundRobin, interleaved, agentSelected, negotiation } from '../spec/examples';
+import { roundRobin, interleaved, agentSelected, negotiation, wordAssociation } from '../spec/examples';
 
 const EXAMPLES: { spec: ChatSpec; blurb: string }[] = [
+  { spec: wordAssociation, blurb: 'Two players swap single-word replies — a minimal testbed.' },
   { spec: roundRobin, blurb: 'Three contributors take turns broadcasting to all.' },
   { spec: interleaved, blurb: 'A moderator alternates turns with three debaters.' },
   { spec: agentSelected, blurb: 'A coordinator picks the next expert each turn.' },
@@ -32,6 +34,11 @@ export function ChatListScreen() {
       <header class="page-header">
         <div class="page-header-top">
           <h2>Chats</h2>
+          {formatCost(totalCost(runs.value)) && (
+            <span class="total-cost" title="Total cost across all chats and runs">
+              {formatCost(totalCost(runs.value))} total
+            </span>
+          )}
         </div>
         <div class="page-header-actions">
           <div class="spacer" />
@@ -80,6 +87,9 @@ export function ChatListScreen() {
                 <div class="chat-meta">
                   {c.spec.agents.length} agent{c.spec.agents.length === 1 ? '' : 's'} ·
                   {' '}{runCount} run{runCount === 1 ? '' : 's'} ·
+                  {formatCost(chatCost(c.id, runs.value)) && (
+                    <>{' '}{formatCost(chatCost(c.id, runs.value))} ·</>
+                  )}
                   {' '}updated {formatDateTime(c.updatedAt)}
                 </div>
               </div>

@@ -13,6 +13,7 @@ import { fingerprintDefinition } from '../engine/fingerprint';
 import { navigate } from '../router';
 import { MODEL_LABELS } from '../types';
 import type { Run } from '../types';
+import { runCost, formatCost } from '../cost';
 
 export function ChatRunScreen() {
   const r = currentRun.value;
@@ -80,7 +81,10 @@ export function ChatRunScreen() {
           </button>
         </div>
         <div class="page-header-actions">
-          <span class="turn-counter">{r.messages.length} messages</span>
+          <span class="turn-counter">
+            {r.messages.length} messages
+            {formatCost(runCost(r)) && <> · {formatCost(runCost(r))}</>}
+          </span>
           <div class="spacer" />
           <ConfirmButton
             label="Clear"

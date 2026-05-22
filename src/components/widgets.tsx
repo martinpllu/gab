@@ -10,6 +10,7 @@ import type {
 import { MODELS, MODEL_LABELS } from '../types';
 import type { Route } from '../types';
 import { navigate } from '../router';
+import { formatCost, formatLatency } from '../cost';
 
 export type Crumb = { label: string; route?: Route; title?: string };
 
@@ -449,6 +450,8 @@ export function Transcript(props: {
               <strong>{senderName(m)}</strong>
               <span class={`scope-tag scope-${kind}`}>{label}</span>
               {m.model && <span class="model-label">{MODEL_LABELS[m.model] ?? m.model}</span>}
+              {formatCost(m.cost) && <span class="cost-label">{formatCost(m.cost)}</span>}
+              {formatLatency(m.latencyMs) && <span class="latency-label">{formatLatency(m.latencyMs)}</span>}
             </div>
             <div class="bubble-content">{m.content}</div>
           </div>

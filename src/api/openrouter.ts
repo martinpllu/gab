@@ -24,6 +24,10 @@ export interface ChatCompletionArgs {
 export interface ChatCompletionResult {
   /** Assistant text content. */
   content: string;
+  /** Cost of this completion in USD, from OpenRouter's usage accounting. */
+  cost?: number;
+  /** Wall-clock time for the request, in milliseconds. */
+  latencyMs: number;
 }
 
 export async function chatCompletion(args: ChatCompletionArgs): Promise<ChatCompletionResult> {
@@ -35,9 +39,11 @@ export async function chatCompletion(args: ChatCompletionArgs): Promise<ChatComp
     messages: args.messages,
     user: args.user,
     stream: false,
+    usage: { include: true },
     ...(args.params ?? {}),
   };
 
+  const startedAt = performance.now();
   const res = await fetch(URL, {
     method: 'POST',
     headers: {
@@ -55,10 +61,15 @@ export async function chatCompletion(args: ChatCompletionArgs): Promise<ChatComp
   }
   const data = (await res.json()) as {
     choices?: { message?: { content?: string | null } }[];
+    usage?: { cost?: number | null };
   };
+  const latencyMs = Math.round(performance.now() - startedAt);
   const message = data.choices?.[0]?.message;
   if (!message) throw new Error('OpenRouter response missing message');
+  const cost = data.usage?.cost;
   return {
     content: typeof message.content === 'string' ? message.content : '',
+    cost: typeof cost === 'number' ? cost : undefined,
+    latencyMs,
   };
 }

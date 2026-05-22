@@ -285,6 +285,13 @@ select {
 .page-header-top .crumbs {
   flex: 1 1 auto;
 }
+.total-cost {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .page-header-actions {
   display: flex;
   align-items: center;
@@ -620,6 +627,18 @@ button.chat-def-header:hover:not(:disabled) {
   background: var(--surface-sunken);
   padding: 2px 6px;
   border-radius: 4px;
+}
+.cost-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.latency-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 .bubble-content {
   white-space: pre-wrap;

@@ -49,6 +49,12 @@ export class ChatRunner {
   private readonly spec: ChatSpec;
   private readonly opts: RuntimeOptions;
   private readonly log: Message[] = [];
+  /**
+   * Cost of a selector completion that produced no message of its own. Folded
+   * into the next agent turn's recorded cost so `agent-select` overhead isn't
+   * lost from the totals.
+   */
+  private pendingSelectorCost = 0;
 
   constructor(spec: ChatSpec, opts: RuntimeOptions = {}) {
     this.spec = spec;
@@ -241,22 +247,39 @@ export class ChatRunner {
     const peers = this.spec.agents.filter((a) => a.id !== agent.id);
     const parsed = parseTurn(result.content, agent.id, peers);
 
+    // Drain any selector overhead accrued since the last recorded message and
+    // fold it into this turn's cost.
+    const selectorCost = this.pendingSelectorCost;
+    this.pendingSelectorCost = 0;
+    const turnCost =
+      result.cost !== undefined || selectorCost > 0
+        ? (result.cost ?? 0) + selectorCost
+        : undefined;
+
     if (parsed.length === 0) {
       // Empty reply — nothing to record. Leave a faint self-note so the turn
       // isn't silently lost from the agent's own perspective.
-      this.appendFromAgent(agent, "[no message produced this turn]", { type: "self" });
+      this.appendFromAgent(agent, "[no message produced this turn]", { type: "self" }, turnCost, result.latencyMs);
       return;
     }
 
     // A phase/opening step can force a scope; when forced, the whole turn goes
     // to that scope regardless of any @-directives the agent wrote.
+    // One completion can yield several messages; attribute its full cost and
+    // latency to the first one recorded so the turn isn't double-counted.
+    let costForTurn: number | undefined = turnCost;
+    let latencyForTurn: number | undefined = result.latencyMs;
     for (const msg of parsed) {
       if (!msg.ok) {
         // Surface the error privately so the agent self-corrects next turn.
-        this.appendFromAgent(agent, `[addressing error] ${msg.error}`, { type: "self" });
+        this.appendFromAgent(agent, `[addressing error] ${msg.error}`, { type: "self" }, costForTurn, latencyForTurn);
+        costForTurn = undefined;
+        latencyForTurn = undefined;
         continue;
       }
-      this.appendFromAgent(agent, msg.content, opts.forcedScope ?? msg.scope);
+      this.appendFromAgent(agent, msg.content, opts.forcedScope ?? msg.scope, costForTurn, latencyForTurn);
+      costForTurn = undefined;
+      latencyForTurn = undefined;
     }
   }
 
@@ -283,6 +306,7 @@ export class ChatRunner {
     } finally {
       this.opts.onAgentEnd?.(selector);
     }
+    if (result.cost !== undefined) this.pendingSelectorCost += result.cost;
     return result.content.trim();
   }
 
@@ -319,6 +343,8 @@ export class ChatRunner {
     agent: AgentDefinition,
     content: string,
     scope: MessageScope,
+    cost?: number,
+    latencyMs?: number,
   ): void {
     this.append({
       from: agent.id,
@@ -328,6 +354,8 @@ export class ChatRunner {
       fromNameSnapshot: agent.name,
       toNamesSnapshot: this.recipientNames(scope),
       model: agent.model,
+      ...(cost !== undefined && { cost }),
+      ...(latencyMs !== undefined && { latencyMs }),
     });
   }
 

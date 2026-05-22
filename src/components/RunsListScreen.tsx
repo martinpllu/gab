@@ -10,6 +10,7 @@ import {
 } from '../state/signals';
 import { fingerprintDefinition } from '../engine/fingerprint';
 import { ConfirmButton, Breadcrumbs, formatDateTime } from './widgets';
+import { runCost, formatCost } from '../cost';
 import { AgentsView } from './editor/AgentsView';
 import { ChatView } from './editor/ChatView';
 import { FlowView } from './editor/FlowView';
@@ -156,6 +157,7 @@ function RunsTab(props: { chatId: string; currentFingerprint: string }) {
               <div class="chat-meta">
                 {r.messages.length} message{r.messages.length === 1 ? '' : 's'} ·
                 {' '}{r.specSnapshot.agents.length} agent{r.specSnapshot.agents.length === 1 ? '' : 's'} ·
+                {formatCost(runCost(r)) && <>{' '}{formatCost(runCost(r))} ·</>}
                 {' '}updated {formatDateTime(r.updatedAt)}
               </div>
             </div>

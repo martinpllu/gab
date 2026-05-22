@@ -323,3 +323,55 @@ export const negotiation: ChatSpec = {
     ],
   },
 };
+
+const s5_alice = "55555555-aaaa-4bbb-8ccc-555555555555" as AgentId;
+const s5_bob = "66666666-aaaa-4bbb-8ccc-666666666666" as AgentId;
+
+export const wordAssociation: ChatSpec = {
+  metadata: {
+    id: "44444444-5555-4666-8777-888888888888" as ScenarioId,
+    title: "Word association",
+    description:
+      "Two players take turns in a word association game, replying with a " +
+      "single word each. A minimal testbed for chat UI changes.",
+    specVersion: 1,
+    createdAt: "2026-05-22T14:00:00Z",
+    updatedAt: "2026-05-22T14:00:00Z",
+  },
+  agents: [
+    {
+      id: s5_alice,
+      name: "Alice",
+      model: "google/gemini-3.1-flash-lite",
+      systemPrompt:
+        "You are playing word association. Reply with a single word that you " +
+        "associate with the previous word. Reply with the word only — no " +
+        "punctuation, no explanation. Never repeat a word already said.",
+      params: { temperature: 0.9 },
+    },
+    {
+      id: s5_bob,
+      name: "Bob",
+      model: "google/gemini-3.1-flash-lite",
+      systemPrompt:
+        "You are playing word association. Reply with a single word that you " +
+        "associate with the previous word. Reply with the word only — no " +
+        "punctuation, no explanation. Never repeat a word already said.",
+      params: { temperature: 0.9 },
+    },
+  ],
+  chat: {
+    sharedPrompt:
+      "A word association game: each player responds to the previous word " +
+      "with a single associated word.",
+    participants: [s5_alice, s5_bob],
+    kickoff: { type: "seed", message: "ocean" },
+    defaultMessageScope: { type: "broadcast" },
+  },
+  flow: {
+    main: {
+      policy: { type: "round-robin", order: [s5_alice, s5_bob] },
+      stop: [{ type: "max-turns", turns: 12 }],
+    },
+  },
+};

@@ -10,7 +10,6 @@ import type {
   Run,
   ChatSpec,
 } from '../types';
-import { MODELS } from '../types';
 import { fingerprintDefinition, snapshotDefinition } from '../engine/fingerprint';
 import { parseHash, navigate } from '../router';
 
@@ -224,11 +223,10 @@ export function createChat(): Chat {
 
 /**
  * Create a chat from an existing ChatSpec (e.g. a built-in example).
- * Deep-clones the spec, assigns a fresh scenario id + timestamps, and remaps
- * every agent's model to a wired OpenRouter model so the demo runs immediately.
+ * Deep-clones the spec and assigns a fresh scenario id + timestamps. Each
+ * agent keeps the model declared in the spec.
  */
 export function createChatFromSpec(source: ChatSpec): Chat {
-  const wired = MODELS;
   const clone: ChatSpec = JSON.parse(JSON.stringify(source));
   const now = new Date().toISOString();
   clone.metadata = {
@@ -237,7 +235,6 @@ export function createChatFromSpec(source: ChatSpec): Chat {
     createdAt: now,
     updatedAt: now,
   };
-  clone.agents = clone.agents.map((a, i) => ({ ...a, model: wired[i % wired.length] }));
 
   const ts = Date.now();
   const c: Chat = { id: uid(), spec: clone, createdAt: ts, updatedAt: ts };
