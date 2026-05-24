@@ -61,6 +61,13 @@ export interface Message {
   cost?: number;
   /** Wall-clock latency of the completion that produced this message, in ms. */
   latencyMs?: number;
+  /**
+   * Verbatim assistant completion that produced this turn, before directive
+   * parsing. Set only on the first message of a turn (a turn can split into
+   * several messages); the displayed `content` is a parsed slice of this.
+   * Display only — surfaced behind a disclosure toggle in the transcript.
+   */
+  raw?: string;
 }
 
 // ---------------------------------------------------------------------------

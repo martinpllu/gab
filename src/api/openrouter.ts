@@ -22,7 +22,7 @@ export interface ChatCompletionArgs {
 }
 
 export interface ChatCompletionResult {
-  /** Assistant text content. */
+  /** Assistant text content (verbatim, before any directive parsing). */
   content: string;
   /** Cost of this completion in USD, from OpenRouter's usage accounting. */
   cost?: number;

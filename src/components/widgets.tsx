@@ -432,32 +432,67 @@ export function Transcript(props: {
           );
         }
 
-        const classes = [
-          'bubble',
-          kind === 'self' ? 'bubble-self' : '',
-          kind === 'private' ? 'bubble-private' : '',
-          synthetic ? 'bubble-synthetic' : '',
-        ].filter(Boolean).join(' ');
-
         return (
-          <div
-            class={classes}
+          <MessageBubble
             key={m.id}
-            style={hue != null ? { '--accent-hue': String(hue) } : undefined}
-          >
-            <div class="bubble-meta">
-              {hue != null && <span class="sender-dot" style={{ background: `hsl(${hue}, 52%, 58%)` }} />}
-              <strong>{senderName(m)}</strong>
-              <span class={`scope-tag scope-${kind}`}>{label}</span>
-              {m.model && <span class="model-label">{MODEL_LABELS[m.model] ?? m.model}</span>}
-              {formatCost(m.cost) && <span class="cost-label">{formatCost(m.cost)}</span>}
-              {formatLatency(m.latencyMs) && <span class="latency-label">{formatLatency(m.latencyMs)}</span>}
-            </div>
-            <div class="bubble-content">{m.content}</div>
-          </div>
+            m={m}
+            label={label}
+            kind={kind}
+            synthetic={synthetic}
+            hue={hue}
+          />
         );
       })}
       {activeAgent && <ThinkingRow name={activeAgent} hue={hueForName(activeAgent)} />}
+    </div>
+  );
+}
+
+function MessageBubble(props: {
+  m: Message;
+  label: string;
+  kind: 'self' | 'private' | 'broadcast';
+  synthetic: boolean;
+  hue: number | null;
+}) {
+  const { m, label, kind, synthetic, hue } = props;
+  const [showRaw, setShowRaw] = useState(false);
+
+  const classes = [
+    'bubble',
+    kind === 'self' ? 'bubble-self' : '',
+    kind === 'private' ? 'bubble-private' : '',
+    synthetic ? 'bubble-synthetic' : '',
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div
+      class={classes}
+      style={hue != null ? { '--accent-hue': String(hue) } : undefined}
+    >
+      <div class="bubble-meta">
+        {hue != null && <span class="sender-dot" style={{ background: `hsl(${hue}, 52%, 58%)` }} />}
+        <strong>{senderName(m)}</strong>
+        <span class={`scope-tag scope-${kind}`}>{label}</span>
+        {m.model && <span class="model-label">{MODEL_LABELS[m.model] ?? m.model}</span>}
+        {formatCost(m.cost) && <span class="cost-label">{formatCost(m.cost)}</span>}
+        {formatLatency(m.latencyMs) && <span class="latency-label">{formatLatency(m.latencyMs)}</span>}
+        {m.raw != null && (
+          <button
+            type="button"
+            class={`raw-toggle${showRaw ? ' raw-toggle-on' : ''}`}
+            aria-expanded={showRaw}
+            title={showRaw ? 'Hide raw response' : 'Show raw response'}
+            onClick={() => setShowRaw((v) => !v)}
+          >
+            {'{ }'}
+          </button>
+        )}
+      </div>
+      <div class="bubble-content">{m.content}</div>
+      {showRaw && m.raw != null && (
+        <pre class="bubble-raw">{m.raw}</pre>
+      )}
     </div>
   );
 }

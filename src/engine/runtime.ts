@@ -259,27 +259,31 @@ export class ChatRunner {
     if (parsed.length === 0) {
       // Empty reply — nothing to record. Leave a faint self-note so the turn
       // isn't silently lost from the agent's own perspective.
-      this.appendFromAgent(agent, "[no message produced this turn]", { type: "self" }, turnCost, result.latencyMs);
+      this.appendFromAgent(agent, "[no message produced this turn]", { type: "self" }, turnCost, result.latencyMs, result.content);
       return;
     }
 
     // A phase/opening step can force a scope; when forced, the whole turn goes
     // to that scope regardless of any @-directives the agent wrote.
-    // One completion can yield several messages; attribute its full cost and
-    // latency to the first one recorded so the turn isn't double-counted.
+    // One completion can yield several messages; attribute its full cost,
+    // latency, and verbatim text to the first one recorded so the turn isn't
+    // double-counted.
     let costForTurn: number | undefined = turnCost;
     let latencyForTurn: number | undefined = result.latencyMs;
+    let rawForTurn: string | undefined = result.content;
     for (const msg of parsed) {
       if (!msg.ok) {
         // Surface the error privately so the agent self-corrects next turn.
-        this.appendFromAgent(agent, `[addressing error] ${msg.error}`, { type: "self" }, costForTurn, latencyForTurn);
+        this.appendFromAgent(agent, `[addressing error] ${msg.error}`, { type: "self" }, costForTurn, latencyForTurn, rawForTurn);
         costForTurn = undefined;
         latencyForTurn = undefined;
+        rawForTurn = undefined;
         continue;
       }
-      this.appendFromAgent(agent, msg.content, opts.forcedScope ?? msg.scope, costForTurn, latencyForTurn);
+      this.appendFromAgent(agent, msg.content, opts.forcedScope ?? msg.scope, costForTurn, latencyForTurn, rawForTurn);
       costForTurn = undefined;
       latencyForTurn = undefined;
+      rawForTurn = undefined;
     }
   }
 
@@ -345,6 +349,7 @@ export class ChatRunner {
     scope: MessageScope,
     cost?: number,
     latencyMs?: number,
+    raw?: string,
   ): void {
     this.append({
       from: agent.id,
@@ -356,6 +361,7 @@ export class ChatRunner {
       model: agent.model,
       ...(cost !== undefined && { cost }),
       ...(latencyMs !== undefined && { latencyMs }),
+      ...(raw !== undefined && { raw }),
     });
   }
 
