@@ -30,21 +30,21 @@ export const roundRobin: ChatSpec = {
     {
       id: s1_alice,
       name: "Alice",
-      model: "anthropic/claude-sonnet-4.5",
+      model: "deepseek/deepseek-v4-flash",
       systemPrompt: "You are Alice, an optimistic product strategist.",
       params: { temperature: 0.7 },
     },
     {
       id: s1_bob,
       name: "Bob",
-      model: "openai/gpt-5",
+      model: "moonshotai/kimi-k2.6",
       systemPrompt: "You are Bob, a sceptical engineer.",
       params: { temperature: 0.5 },
     },
     {
       id: s1_carol,
       name: "Carol",
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-3.1-flash-lite",
       systemPrompt: "You are Carol, a UX researcher focused on the user's voice.",
     },
   ],
@@ -87,27 +87,27 @@ export const interleaved: ChatSpec = {
     {
       id: s2_alice,
       name: "Alice",
-      model: "anthropic/claude-sonnet-4.5",
+      model: "deepseek/deepseek-v4-flash",
       systemPrompt: "You argue for the productivity benefits of remote work.",
       params: { temperature: 0.7 },
     },
     {
       id: s2_bob,
       name: "Bob",
-      model: "openai/gpt-5",
+      model: "moonshotai/kimi-k2.6",
       systemPrompt: "You argue for the productivity benefits of in-office work.",
       params: { temperature: 0.5 },
     },
     {
       id: s2_carol,
       name: "Carol",
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-3.1-flash-lite",
       systemPrompt: "You argue for a hybrid model.",
     },
     {
       id: s2_moderator,
       name: "Moderator",
-      model: "anthropic/claude-opus-4.7",
+      model: "deepseek/deepseek-v4-pro",
       systemPrompt:
         "You moderate the discussion. After each speaker, weigh their argument " +
         "fairly and summarise the state of the debate. Respond with DONE on " +
@@ -176,25 +176,25 @@ export const agentSelected: ChatSpec = {
     {
       id: s3_dba,
       name: "DBA",
-      model: "anthropic/claude-sonnet-4.5",
+      model: "deepseek/deepseek-v4-flash",
       systemPrompt: "You are a database administrator diagnosing query performance.",
     },
     {
       id: s3_backend,
       name: "Backend engineer",
-      model: "openai/gpt-5",
+      model: "moonshotai/kimi-k2.6",
       systemPrompt: "You are a backend engineer investigating application causes.",
     },
     {
       id: s3_sre,
       name: "SRE",
-      model: "anthropic/claude-sonnet-4.5",
+      model: "google/gemini-3.1-flash-lite",
       systemPrompt: "You are an SRE investigating infrastructure and load issues.",
     },
     {
       id: s3_coordinator,
       name: "Coordinator",
-      model: "anthropic/claude-opus-4.7",
+      model: "deepseek/deepseek-v4-pro",
       systemPrompt:
         "Read the discussion and decide who should speak next. Reply with " +
         "exactly one of: DBA, Backend engineer, SRE. Reply RESOLVED when done.",
@@ -256,7 +256,7 @@ export const negotiation: ChatSpec = {
     {
       id: s4_seller_a,
       name: "Seller A",
-      model: "anthropic/claude-sonnet-4.5",
+      model: "deepseek/deepseek-v4-flash",
       systemPrompt:
         "You are Seller A. You want the highest possible price. You may keep " +
         "private notes about your strategy by addressing messages to yourself.",
@@ -265,7 +265,7 @@ export const negotiation: ChatSpec = {
     {
       id: s4_seller_b,
       name: "Seller B",
-      model: "openai/gpt-5",
+      model: "moonshotai/kimi-k2.6",
       systemPrompt:
         "You are Seller B. You also want the highest price but value a quick " +
         "deal more than Seller A does. Keep private notes by writing to yourself.",
@@ -274,7 +274,7 @@ export const negotiation: ChatSpec = {
     {
       id: s4_buyer,
       name: "Buyer",
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-3.1-flash-lite",
       systemPrompt:
         "You are the Buyer. You want the lowest price and may message either " +
         "seller privately to drive a wedge between them.",
@@ -283,7 +283,7 @@ export const negotiation: ChatSpec = {
     {
       id: s4_observer,
       name: "Observer",
-      model: "anthropic/claude-opus-4.7",
+      model: "deepseek/deepseek-v4-pro",
       systemPrompt:
         "You silently observe the entire negotiation, including private " +
         "messages and each participant's private notes. At the end, produce " +

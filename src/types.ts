@@ -23,10 +23,17 @@ import type { AgentId, ChatSpec, MessageId, MessageScope } from './spec/types';
 
 // Suggested models for the picker. Not a closed set — `model` is a free string
 // (any OpenRouter ID). Display falls back to the raw ID for unknown models.
-export const MODELS = ['google/gemini-3.1-flash-lite', 'moonshotai/kimi-k2.6'] as const;
+export const MODELS = [
+  'google/gemini-3.1-flash-lite',
+  'deepseek/deepseek-v4-flash',
+  'deepseek/deepseek-v4-pro',
+  'moonshotai/kimi-k2.6',
+] as const;
 
 export const MODEL_LABELS: Record<string, string> = {
   'google/gemini-3.1-flash-lite': 'Gemini 3.1 Flash Lite',
+  'deepseek/deepseek-v4-flash': 'DeepSeek V4 Flash',
+  'deepseek/deepseek-v4-pro': 'DeepSeek V4 Pro',
   'moonshotai/kimi-k2.6': 'Kimi K2.6',
 };
 
