@@ -38,6 +38,11 @@ Incoming messages are labelled with the sender's name and who could see them:
   [you → ...]              a message you previously sent
   [you ↻ self]             a private note you wrote to yourself
 
+These [... → ...] labels are read-only annotations the system adds so you can \
+see who said what. Never write them yourself — they are not addressing syntax. \
+When it is your turn, address messages only with @-directives (@all, @Name, \
+@self); the labels are added for you automatically.
+
 When you see [Alice → you], remember that other participants may not have seen \
 what Alice told you — keep that context private unless you choose to share it.`;
 
