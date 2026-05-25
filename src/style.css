@@ -646,6 +646,58 @@ button.chat-def-header:hover:not(:disabled) {
   line-height: 1.6;
   color: var(--ink-soft);
 }
+/* Markdown inside a response bubble. Inline emphasis rides on top of the
+   bubble's pre-wrap layout; GFM tables are lifted out into real table markup. */
+.bubble-content strong {
+  font-weight: 650;
+  color: var(--ink);
+}
+.bubble-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bubble-content a:hover {
+  color: var(--accent-strong, var(--accent));
+}
+.bubble-content .md-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  padding: 0.1em 0.36em;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+}
+.bubble-content .md-table {
+  /* The table is its own block; reset the inherited pre-wrap so cell text
+     wraps normally rather than preserving source whitespace. */
+  white-space: normal;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 0.95em;
+  line-height: 1.45;
+}
+.bubble-content .md-table th,
+.bubble-content .md-table td {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.bubble-content .md-table th {
+  font-weight: 650;
+  color: var(--ink);
+  background: var(--surface-sunken);
+}
+.bubble-content .md-list {
+  /* Own block; reset inherited pre-wrap so item text wraps normally. */
+  white-space: normal;
+  margin: 8px 0;
+  padding-left: 1.5em;
+}
+.bubble-content .md-list li {
+  margin: 2px 0;
+}
 
 /* ─── raw-response disclosure ───────────────────────────── */
 

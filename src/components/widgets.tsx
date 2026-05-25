@@ -11,6 +11,7 @@ import { MODELS, MODEL_LABELS } from '../types';
 import type { Route } from '../types';
 import { navigate } from '../router';
 import { formatCost, formatLatency } from '../cost';
+import { InlineMarkdown } from './markdown';
 
 export type Crumb = { label: string; route?: Route; title?: string };
 
@@ -489,7 +490,7 @@ function MessageBubble(props: {
           </button>
         )}
       </div>
-      <div class="bubble-content">{m.content}</div>
+      <div class="bubble-content"><InlineMarkdown text={m.content} /></div>
       {showRaw && m.raw != null && (
         <pre class="bubble-raw">{m.raw}</pre>
       )}
